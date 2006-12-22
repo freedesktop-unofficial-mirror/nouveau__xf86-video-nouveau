@@ -574,6 +574,21 @@ NVFreeRec(ScrnInfoPtr pScrn)
     pScrn->driverPrivate = NULL;
 }
 
+static Bool
+NvCreateScreenResources (ScreenPtr pScreen)
+{
+   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+   NVPtr pNv = NVPTR(pScrn);
+
+   pScreen->CreateScreenResources = pNv->CreateScreenResources;
+   if (!(*pScreen->CreateScreenResources)(pScreen))
+      return FALSE;
+
+   if (!xf86RandR12CreateScreenResources (pScreen))
+      return FALSE;
+
+   return TRUE;
+}
 
 static pointer
 nouveauSetup(pointer module, pointer opts, int *errmaj, int *errmin)
@@ -2133,6 +2148,12 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	NULL, CMAP_RELOAD_ON_MODE_SWITCH | CMAP_PALETTED_TRUECOLOR))
 	return FALSE;
 
+    xf86RandR12Init (pScreen);
+    xf86RandR12SetRotations (pScreen, RR_Rotate_0); /* only 0 degrees for I965G */
+    pNv->PointerMoved = pScrn->PointerMoved;
+    pScrn->PointerMoved = NVPointerMoved;
+    pNv->CreateScreenResources = pScreen->CreateScreenResources;
+    pScreen->CreateScreenResources = NvCreateScreenResources;
     if(pNv->ShadowFB) {
 	RefreshAreaFuncPtr refreshArea = NVRefreshArea;
 

@@ -261,6 +261,8 @@ typedef struct _NVRec {
     DRIInfoPtr          pDRIInfo;
     drmVersionPtr       pLibDRMVersion;
     drmVersionPtr       pKernelDRMVersion;
+
+  CreateScreenResourcesProcPtr    CreateScreenResources;
 } NVRec;
 
 #define NVPTR(p) ((NVPtr)((p)->driverPrivate))
