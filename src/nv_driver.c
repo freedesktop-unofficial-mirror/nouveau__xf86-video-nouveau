@@ -1059,7 +1059,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     int i, max_width, max_height;
     ClockRangePtr clockRanges;
     const char *s;
-    int num_crtc = 2;
+    int num_crtc;
 
     if (flags & PROBE_DETECT) {
         EntityInfoPtr pEnt = xf86GetEntityInfo(pScrn->entityList[0]);
@@ -1534,6 +1534,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     NVI2CInit(pScrn);
 
     NvSetupOutputs(pScrn);
+    num_crtc = pNv->twoHeads ? 2 : 1;
     for (i = 0; i < num_crtc; i++) {
         nv_crtc_init(pScrn, i);
     }

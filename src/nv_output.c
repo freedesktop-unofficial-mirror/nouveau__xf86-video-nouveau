@@ -189,12 +189,15 @@ static const xf86OutputFuncsRec nv_output_funcs = {
 void NvSetupOutputs(ScrnInfoPtr pScrn)
 {
   int i;
+  NVPtr pNv = NVPTR(pScrn);
   xf86OutputPtr	    output;
   NVOutputPrivatePtr    nv_output;
   char *name[2] =  { "VGA0", "VGA1" };
   int   crtc_mask = (1<<0) | (1<<1);
 
-  for (i = 0; i<NV_MAX_OUTPUT; i++) {
+  int num_outputs = pNv->twoHeads ? 2 : 1;
+
+  for (i = 0; i<num_outputs; i++) {
 
     output = xf86OutputCreate (pScrn, &nv_output_funcs, name[i]);
     if (!output)
