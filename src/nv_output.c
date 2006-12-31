@@ -60,6 +60,18 @@ const char *MonTypeName[7] = {
   "STV"
 };
 
+void NVWriteRAMDAC(xf86OutputPtr output, CARD32 ramdac_reg, CARD32 val)
+{
+  NVOutputPrivatePtr nv_output = output->driver_private;
+  NV_WR32(nv_output->pRAMDACReg, ramdac_reg, val);
+
+}
+
+CARD32 NVReadRAMDAC(xf86OutputPtr output, CARD32 ramdac_reg)
+{
+  NVOutputPrivatePtr nv_output = output->driver_private;
+  return NV_RD32(nv_output->pRAMDACReg, ramdac_reg);
+}
 
 static void
 nv_output_dpms(xf86OutputPtr output, int mode)
@@ -237,6 +249,11 @@ void NvSetupOutputs(ScrnInfoPtr pScrn)
     
     output->driver_private = nv_output;
     nv_output->type = output_type;
+    nv_output->ramdac = i;
+    if (i == 0)
+      nv_output->pRAMDACReg = pNv->PRAMDAC0;
+    else
+      nv_output->pRAMDACReg = pNv->PRAMDAC1;
 
     NV_I2CInit(pScrn, &nv_output->pDDCBus, i ? 0x36 : 0x3e, ddc_name[i]);
     

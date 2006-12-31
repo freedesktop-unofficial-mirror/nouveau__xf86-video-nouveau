@@ -373,13 +373,9 @@ void nv_crtc_calc_state_ext(
                                          &(state->arbitration1));
             }
 
-	    regp->CRTC[NV_VGA_CRTCX_FIFO0] = state->arbitration0;
-	    regp->CRTC[NV_VGA_CRTCX_FIFO_LWM] = state->arbitration1 & 0xff;
-	    if (pNv->Architecture >= NV_ARCH_30) {
-	      regp->CRTC[NV_VGA_CRTCX_FIFO_LWM_NV30] = state->arbitration1 >> 8;
-	    }
 
 	    CursorStart = pNv->Cursor->offset - pNv->VRAMPhysical;
+	    ErrorF("Cursor Start is at %08X\n", CursorStart);
             regp->CRTC[NV_VGA_CRTCX_CURCTL0] = 0x80 | (CursorStart >> 17);
             regp->CRTC[NV_VGA_CRTCX_CURCTL1] = (CursorStart >> 11) << 2;
 	    regp->CRTC[NV_VGA_CRTCX_CURCTL2] = CursorStart >> 24;
@@ -394,6 +390,12 @@ void nv_crtc_calc_state_ext(
             break;
     }
 
+    regp->CRTC[NV_VGA_CRTCX_FIFO0] = state->arbitration0;
+    regp->CRTC[NV_VGA_CRTCX_FIFO_LWM] = state->arbitration1 & 0xff;
+    if (pNv->Architecture >= NV_ARCH_30) {
+      regp->CRTC[NV_VGA_CRTCX_FIFO_LWM_NV30] = state->arbitration1 >> 8;
+    }
+    
     if(bpp != 8) /* DirectColor */
 	state->general |= 0x00000030;
 
@@ -408,26 +410,49 @@ nv_crtc_dpms(xf86CrtcPtr crtc, int mode)
      ScrnInfoPtr pScrn = crtc->scrn;
      NVPtr pNv = NVPTR(pScrn);
      NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+     unsigned char seq1 = 0, crtc17 = 0;
      unsigned char crtc1A;
      int ret;
 
-     crtc1A = NVReadVgaCrtc(crtc, 0x1A) & ~0xC0;
+     crtc1A = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_REPAINT1) & ~0xC0;
      switch(mode) {
      case DPMSModeStandby:
+       /* Screen: Off; HSync: Off, VSync: On -- Not Supported */
+       seq1 = 0x20;
+       crtc17 = 0x80;
+
        crtc1A |= 0x80;
        break;
      case DPMSModeSuspend:
+
+       /* Screen: Off; HSync: On, VSync: Off -- Not Supported */
+       seq1 = 0x20;
+       crtc17 = 0x80;
        crtc1A |= 0x40;
        break;
      case DPMSModeOff:
+       /* Screen: Off; HSync: Off, VSync: Off */
+       seq1 = 0x20;
+       crtc17 = 0x00;
        crtc1A |= 0xC0;
        break;
      case DPMSModeOn:
      default:
+       /* Screen: On; HSync: On, VSync: On */
+       seq1 = 0x00;
+       crtc17 = 0x80;
        break;
      }
-     
-     NVWriteVgaCrtc(crtc, 0x1A, crtc1A);
+
+     NVWriteVgaSeq(crtc, 0x00, 0x1);
+     seq1 = NVReadVgaSeq(crtc, 0x01) & ~0x20;
+     NVWriteVgaSeq(crtc, 0x1, seq1);
+     crtc17 |= NVReadVgaCrtc(crtc, NV_VGA_CRTCX_MODECTL) & ~0x80;
+     usleep(10000);
+     NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_MODECTL, crtc17);
+     NVWriteVgaSeq(crtc, 0x0, 003);
+
+     NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_REPAINT1, crtc1A);
 }
 
 static Bool
@@ -606,6 +631,8 @@ nv_crtc_mode_set_vga(xf86CrtcPtr crtc, DisplayModePtr mode)
             regp->Attribute[16] = 0x81; /* wrong for the ET4000 */
         else
             regp->Attribute[16] = 0x41; /* wrong for the ET4000 */
+	if (depth > 4)
+	  regp->Attribute[17] = 0xff;
         /* Attribute[17] (overscan) initialised in vgaHWGetHWRec() */
     }
     regp->Attribute[18] = 0x0F;
@@ -866,11 +893,14 @@ nv_crtc_init(ScrnInfoPtr pScrn, int crtc_num)
     nv_crtc = xnfcalloc (sizeof (NVCrtcPrivateRec), 1);
     nv_crtc->crtc = crtc_num;
 
-    if (crtc_num == 0)
+    if (crtc_num == 0) {
       nv_crtc->pCRTCReg = pNv->PCIO0;
-    else
+      nv_crtc->pDACReg = pNv->PDIO0;
+    }
+    else {
       nv_crtc->pCRTCReg = pNv->PCIO1;
-
+      nv_crtc->pDACReg = pNv->PDIO1;
+    }
     
     crtc->driver_private = nv_crtc;
 }
@@ -979,7 +1009,7 @@ void nv_crtc_load_state(xf86CrtcPtr crtc)
     NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FIFO0, regp->CRTC[NV_VGA_CRTCX_FIFO0]);
     NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FIFO_LWM, regp->CRTC[NV_VGA_CRTCX_FIFO_LWM]);
     if(pNv->Architecture >= NV_ARCH_30) {
-      NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FIFO_LWM_NV30, regp->CRTC[NV_VGA_CRTCX_FIFO_LWM] >> 8);
+      NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FIFO_LWM_NV30, regp->CRTC[NV_VGA_CRTCX_FIFO_LWM_NV30]);
     }
 
     NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_CURCTL0, regp->CRTC[NV_VGA_CRTCX_CURCTL0]);
@@ -1029,10 +1059,11 @@ void nv_unload_state_ext(xf86CrtcPtr crtc)
     regp->CRTC[NV_VGA_CRTCX_PIXEL] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_PIXEL);
     regp->CRTC[NV_VGA_CRTCX_HEB] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_HEB);
     regp->CRTC[NV_VGA_CRTCX_FIFO1] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_FIFO1);
+
     regp->CRTC[NV_VGA_CRTCX_FIFO0] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_FIFO0);
     regp->CRTC[NV_VGA_CRTCX_FIFO_LWM] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_FIFO_LWM);
     if(pNv->Architecture >= NV_ARCH_30) {
-        regp->CRTC[NV_VGA_CRTCX_FIFO_LWM_NV30] |= (NVReadVgaCrtc(crtc, NV_VGA_CRTCX_FIFO_LWM_NV30) & 1) << 8;
+         regp->CRTC[NV_VGA_CRTCX_FIFO_LWM_NV30] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_FIFO_LWM_NV30);
     }
     regp->CRTC[NV_VGA_CRTCX_CURCTL0] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_CURCTL0);
     regp->CRTC[NV_VGA_CRTCX_CURCTL1] = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_CURCTL1);
@@ -1096,7 +1127,6 @@ NVCrtcSetBase (xf86CrtcPtr crtc, int x, int y)
     crtc->x = x;
     crtc->y = y;
 }
-
 
 /**
  * In the current world order, there are lists of modes per output, which may
@@ -1322,6 +1352,79 @@ done:
     return ok;
 }
 
+
+void NVCrtcSetCursor(xf86CrtcPtr crtc, Bool state)
+{
+  int current = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_CURCTL1);
+
+  if(state) 
+    current |= 1;
+  else
+    current &= ~1;
+
+  NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_CURCTL1, current);
+}
+
+static void NVCrtcWriteDacMask(xf86CrtcPtr crtc, CARD8 value)
+{
+  NVCrtcPrivatePtr nv_crtc = crtc->driver_private;  
+
+  NV_WR08(nv_crtc->pDACReg, VGA_DAC_MASK, value);
+}
+
+static CARD8 NVCrtcReadDacMask(xf86CrtcPtr crtc)
+{
+  NVCrtcPrivatePtr nv_crtc = crtc->driver_private;  
+  
+  return NV_RD08(nv_crtc->pDACReg, VGA_DAC_MASK);
+}
+
+static void NVCrtcWriteDacReadAddr(xf86CrtcPtr crtc, CARD8 value)
+{
+  NVCrtcPrivatePtr nv_crtc = crtc->driver_private;  
+
+  NV_WR08(nv_crtc->pDACReg, VGA_DAC_READ_ADDR, value);
+}
+
+static void NVCrtcWriteDacWriteAddr(xf86CrtcPtr crtc, CARD8 value)
+{
+  NVCrtcPrivatePtr nv_crtc = crtc->driver_private;  
+
+  NV_WR08(nv_crtc->pDACReg, VGA_DAC_WRITE_ADDR, value);
+}
+
+static void NVCrtcWriteDacData(xf86CrtcPtr crtc, CARD8 value)
+{
+  NVCrtcPrivatePtr nv_crtc = crtc->driver_private;  
+
+  NV_WR08(nv_crtc->pDACReg, VGA_DAC_DATA, value);
+}
+
+static void NVCrtcReadDacData(xf86CrtcPtr crtc, CARD8 value)
+{
+  NVCrtcPrivatePtr nv_crtc = crtc->driver_private;  
+
+  return NV_RD08(nv_crtc->pDACReg, VGA_DAC_DATA);
+}
+
+void NVCrtcLoadPalette(xf86CrtcPtr crtc)
+{
+  int i;
+  NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+  NVCrtcRegPtr regp;
+  ScrnInfoPtr pScrn = crtc->scrn;
+  NVPtr pNv = NVPTR(pScrn);
+    
+  regp = &pNv->ModeReg.crtc_reg[nv_crtc->crtc];
+
+  NVCrtcWriteDacMask(crtc, 0xff);
+  NVCrtcWriteDacWriteAddr(crtc, 0x00);
+
+  for (i = 0; i<768; i++) {
+    NVCrtcWriteDacData(crtc, regp->DAC[i]);
+  }
+  NVDisablePalette(crtc);
+}
 
 void
 NVDumpAllRegisters(ScrnInfoPtr pScrn)

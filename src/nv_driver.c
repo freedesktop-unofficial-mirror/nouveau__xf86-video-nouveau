@@ -887,6 +887,7 @@ NVEnterVT(int scrnIndex, int flags)
     NVPtr pNv = NVPTR(pScrn);
     int i;
 
+    pScrn->vtSema = TRUE;
    for (i = 0; i < xf86_config->num_crtc; i++)
    {
       xf86CrtcPtr	crtc = xf86_config->crtc[i];
@@ -1782,8 +1783,8 @@ NVMapMem(ScrnInfoPtr pScrn)
 		return FALSE;
 	}
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-			"Allocated %dMiB VRAM for framebuffer + offscreen pixmaps\n",
-			pNv->FB->size >> 20
+			"Allocated %dMiB VRAM for framebuffer + offscreen pixmaps at %08X\n",
+		   pNv->FB->size >> 20, pNv->FB->offset
 			);
 
 	pNv->Cursor = NVAllocateMemory(pNv, NOUVEAU_MEM_FB, 64*1024);
@@ -1791,6 +1792,10 @@ NVMapMem(ScrnInfoPtr pScrn)
 		ErrorF("Failed to allocate memory for hardware cursor\n");
 		return FALSE;
 	}
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+ 		   "Allocated %dKiB VRAM for cursor\n",
+		   pNv->Cursor->size >> 10
+		   );
 
 	pNv->ScratchBuffer = NVAllocateMemory(pNv, NOUVEAU_MEM_FB,
 			pNv->Architecture <NV_ARCH_10 ? 8192 : 16384);
@@ -1994,6 +1999,60 @@ NVDPMSSet(ScrnInfoPtr pScrn, int PowerManagementMode, int flags)
   hwp->writeCrtc(hwp, 0x1A, crtc1A);
 }
 
+#define DEPTH_SHIFT(val, w) ((val << (8 - w)) | (val >> ((w << 1) - 8)))
+#define MAKE_INDEX(in, w) (DEPTH_SHIFT(in, w) * 3)
+
+static void
+NVLoadPalette(ScrnInfoPtr pScrn, int numColors, int *indices,
+	      LOCO * colors, VisualPtr pVisual)
+{
+  xf86CrtcConfigPtr   xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+  int c;
+  NVPtr pNv = NVPTR(pScrn);
+  int i, index;
+
+  for (c = 0; c < xf86_config->num_crtc; c++){
+    xf86CrtcPtr crtc = xf86_config->crtc[c];
+    NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+    NVCrtcRegPtr regp;
+
+    regp = &pNv->ModeReg.crtc_reg[nv_crtc->crtc];
+    
+    if (crtc->enabled == 0)
+      continue;
+
+    switch(pNv->CurrentLayout.depth) {
+    case 15:
+      for(i = 0; i < numColors; i++) {
+	index = indices[i];
+	regp->DAC[MAKE_INDEX(index, 5) + 0] = colors[index].red;
+	regp->DAC[MAKE_INDEX(index, 5) + 1] = colors[index].green;
+	regp->DAC[MAKE_INDEX(index, 5) + 2] = colors[index].blue;
+      }
+      break;
+    case 16:
+      for(i = 0; i < numColors; i++) {
+	index = indices[i];
+	regp->DAC[MAKE_INDEX(index, 6) + 1] = colors[index].green;
+	if(index < 32) {
+	  regp->DAC[MAKE_INDEX(index, 5) + 0] = colors[index].red;
+	  regp->DAC[MAKE_INDEX(index, 5) + 2] = colors[index].blue;
+	}
+      }
+      break;
+    default:
+      for(i = 0; i < numColors; i++) {
+	index = indices[i];
+	regp->DAC[index*3]     = colors[index].red;
+	regp->DAC[(index*3)+1] = colors[index].green;
+	regp->DAC[(index*3)+2] = colors[index].blue;
+      }
+      break;
+    }
+
+    NVCrtcLoadPalette(crtc);
+  }
+}
 
 /* Mandatory */
 
@@ -2199,7 +2258,7 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 
     /* Initialize colormap layer.  
 	Must follow initialization of the default colormap */
-    if(!xf86HandleColormaps(pScreen, 256, 8, NVDACLoadPalette,
+    if(!xf86HandleColormaps(pScreen, 256, 8, NVLoadPalette,
 	NULL, CMAP_RELOAD_ON_MODE_SWITCH | CMAP_PALETTED_TRUECOLOR))
 	return FALSE;
 

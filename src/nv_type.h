@@ -159,12 +159,15 @@ typedef struct {
 typedef struct _NVCrtcPrivateRec {
 	int crtc;
         volatile CARD8 *pCRTCReg;
+        volatile CARD8 *pDACReg;
         Bool paletteEnabled;
 } NVCrtcPrivateRec, *NVCrtcPrivatePtr;
 
 #define NVCrtcPrivate(c) ((NVCrtcPrivatePtr)(c)->driver_private)
 
 typedef struct _NVOutputPrivateRec {
+        int ramdac;
+        volatile CARD32 *pRAMDACReg;
         I2CBusPtr		    pDDCBus;
         NVOutputType type;
         NVMonitorType mon_type;
@@ -185,6 +188,7 @@ typedef struct _NVRec {
     int                 ChipRev;
     Bool                Primary;
     CARD32              IOAddress;
+    Bool cursorOn;
 	unsigned long       VRAMPhysical;
 	unsigned long		VRAMPhysicalSize;
 	NVAllocRec *        FB;

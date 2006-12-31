@@ -65,7 +65,7 @@ CARD32 nvReadRAMDAC(NVPtr pNv, uint8_t head, uint32_t ramdac_reg)
 void nvWriteRAMDAC(NVPtr pNv, uint8_t head, uint32_t ramdac_reg, CARD32 val)
 {
   volatile const void *ptr = head ? pNv->PRAMDAC1 : pNv->PRAMDAC0;
-  MMIO_OUT32(ptr, ramdac_reg, val);
+  NV_WR32(ptr, ramdac_reg, val);
 }
 
 CARD32 nvReadCRTC(NVPtr pNv, uint8_t head, uint32_t reg)
@@ -77,7 +77,7 @@ CARD32 nvReadCRTC(NVPtr pNv, uint8_t head, uint32_t reg)
 void nvWriteCRTC(NVPtr pNv, uint8_t head, uint32_t reg, CARD32 val)
 {
   volatile const void *ptr = head ? pNv->PCRTC1 : pNv->PCRTC0;
-  MMIO_OUT32(ptr, reg, val);
+  NV_WR32(ptr, reg, val);
 }
 
 void NVLockUnlock (
@@ -1317,7 +1317,11 @@ void NVLoadStateExt (ScrnInfoPtr pScrn, RIVA_HW_STATE *state)
     nvWriteVGA(pNv, NV_VGA_CRTCX_PIXEL, state->pixel);
     nvWriteVGA(pNv, NV_VGA_CRTCX_HEB, state->horiz);
     nvWriteVGA(pNv, NV_VGA_CRTCX_FIFO1, state->fifo);
+
+    ErrorF("Writing %02X\n", state->arbitration0);
     nvWriteVGA(pNv, NV_VGA_CRTCX_FIFO0, state->arbitration0);
+
+    ErrorF("Reading %02X\n", nvReadVGA(pNv, NV_VGA_CRTCX_FIFO0));
     nvWriteVGA(pNv, NV_VGA_CRTCX_FIFO_LWM, state->arbitration1);
     if(pNv->Architecture >= NV_ARCH_30) {
       nvWriteVGA(pNv, NV_VGA_CRTCX_FIFO_LWM_NV30, state->arbitration1 >> 8);
