@@ -1,22 +1,31 @@
 /*
+ * Copyright 2006 Dave Airlie
  *
- * Permission to use, copy, modify, distribute, and sell this software and its
- * documentation for any purpose is hereby granted without fee, provided that
- * the above copyright notice appear in all copies and that both that
- * copyright notice and this permission notice appear in supporting
- * documentation, and that the name of the author not be used in
- * advertising or publicity pertaining to distribution of the software without
- * specific, written prior permission.  Keith Packard makes no
- * representations about the suitability of this software for any purpose.  It
- * is provided "as is" without express or implied warranty.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
- * EVENT SHALL KEITH PACKARD BE LIABLE FOR ANY SPECIAL, INDIRECT OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
- * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ * Authors:
+ *  Dave Airlie
+ */
+/*
+ * this code uses ideas taken from the NVIDIA nv driver - the nvidia license
+ * decleration is at the bottom of this file as it is rather ugly 
  */
 
 #ifdef HAVE_CONFIG_H
@@ -91,7 +100,7 @@ nv_output_dpms(xf86OutputPtr output, int mode)
 static void
 nv_output_save (xf86OutputPtr output)
 {
-
+    
 }
 
 static void
@@ -118,19 +127,6 @@ static Bool
 nv_output_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
 		    DisplayModePtr adjusted_mode)
 {
-    NVOutputPrivatePtr nv_output = output->driver_private;
-
-#if 0
-    if(nv_output->mon_type == MT_LCD) {
-       vertStart = vertTotal - 3;  
-       vertEnd = vertTotal - 2;
-       vertBlankStart = vertStart;
-       horizStart = horizTotal - 5;
-       horizEnd = horizTotal - 2;   
-       horizBlankEnd = horizTotal + 4;    
-    }
-#endif
-
     return TRUE;
 }
 
@@ -156,6 +152,12 @@ nv_output_mode_set(xf86OutputPtr output, DisplayModePtr mode,
     } else {
 	NVWriteRAMDAC(output, NV_RAMDAC_FP_CONTROL, state->scale);
 	NVWriteRAMDAC(output, NV_RAMDAC_FP_HCRTC, state->crtcSync);
+
+	if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
+	    NVWriteRAMDAC(output, NV_RAMDAC_DITHER_NV11, state->dither);
+	} else if(pNv->twoHeads) {
+	    NVWriteRAMDAC(output, NV_RAMDAC_FP_DITHER, state->dither);
+	}
     }
     NVWriteRAMDAC(output, NV_RAMDAC_GENERAL_CONTROL, state->general);
 
@@ -375,3 +377,43 @@ void NvSetupOutputs(ScrnInfoPtr pScrn)
     output->possible_crtcs = crtc_mask;
   }
 }
+
+
+/*************************************************************************** \
+|*                                                                           *|
+|*       Copyright 1993-2003 NVIDIA, Corporation.  All rights reserved.      *|
+|*                                                                           *|
+|*     NOTICE TO USER:   The source code  is copyrighted under  U.S. and     *|
+|*     international laws.  Users and possessors of this source code are     *|
+|*     hereby granted a nonexclusive,  royalty-free copyright license to     *|
+|*     use this code in individual and commercial software.                  *|
+|*                                                                           *|
+|*     Any use of this source code must include,  in the user documenta-     *|
+|*     tion and  internal comments to the code,  notices to the end user     *|
+|*     as follows:                                                           *|
+|*                                                                           *|
+|*       Copyright 1993-1999 NVIDIA, Corporation.  All rights reserved.      *|
+|*                                                                           *|
+|*     NVIDIA, CORPORATION MAKES NO REPRESENTATION ABOUT THE SUITABILITY     *|
+|*     OF  THIS SOURCE  CODE  FOR ANY PURPOSE.  IT IS  PROVIDED  "AS IS"     *|
+|*     WITHOUT EXPRESS OR IMPLIED WARRANTY OF ANY KIND.  NVIDIA, CORPOR-     *|
+|*     ATION DISCLAIMS ALL WARRANTIES  WITH REGARD  TO THIS SOURCE CODE,     *|
+|*     INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGE-     *|
+|*     MENT,  AND FITNESS  FOR A PARTICULAR PURPOSE.   IN NO EVENT SHALL     *|
+|*     NVIDIA, CORPORATION  BE LIABLE FOR ANY SPECIAL,  INDIRECT,  INCI-     *|
+|*     DENTAL, OR CONSEQUENTIAL DAMAGES,  OR ANY DAMAGES  WHATSOEVER RE-     *|
+|*     SULTING FROM LOSS OF USE,  DATA OR PROFITS,  WHETHER IN AN ACTION     *|
+|*     OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,  ARISING OUT OF     *|
+|*     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOURCE CODE.     *|
+|*                                                                           *|
+|*     U.S. Government  End  Users.   This source code  is a "commercial     *|
+|*     item,"  as that  term is  defined at  48 C.F.R. 2.101 (OCT 1995),     *|
+|*     consisting  of "commercial  computer  software"  and  "commercial     *|
+|*     computer  software  documentation,"  as such  terms  are  used in     *|
+|*     48 C.F.R. 12.212 (SEPT 1995)  and is provided to the U.S. Govern-     *|
+|*     ment only as  a commercial end item.   Consistent with  48 C.F.R.     *|
+|*     12.212 and  48 C.F.R. 227.7202-1 through  227.7202-4 (JUNE 1995),     *|
+|*     all U.S. Government End Users  acquire the source code  with only     *|
+|*     those rights set forth herein.                                        *|
+|*                                                                           *|
+ \***************************************************************************/

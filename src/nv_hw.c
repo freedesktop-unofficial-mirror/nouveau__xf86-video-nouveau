@@ -1296,13 +1296,6 @@ void NVLoadStateExt (ScrnInfoPtr pScrn, RIVA_HW_STATE *state)
         nvWriteCurCRTC(pNv, NV_CRTC_0834, state->displayV - 1);
     
         if(pNv->FlatPanel) {
-           if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
-               nvWriteCurRAMDAC(pNv, NV_RAMDAC_DITHER_NV11, state->dither);
-           } else 
-           if(pNv->twoHeads) {
-               nvWriteCurRAMDAC(pNv, NV_RAMDAC_FP_DITHER, state->dither);
-           }
-    
 	   nvWriteVGA(pNv, NV_VGA_CRTCX_FP_HTIMING, state->timingH);
 	   nvWriteVGA(pNv, NV_VGA_CRTCX_FP_VTIMING, state->timingV);
 	   nvWriteVGA(pNv, NV_VGA_CRTCX_BUFFER, 0xfa);
