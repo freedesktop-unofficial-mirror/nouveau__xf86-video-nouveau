@@ -180,82 +180,12 @@ static CARD8 NVReadDacData(vgaHWPtr pVga)
     return (VGA_RD08(ptr, VGA_DAC_DATA));
 }
 
-static Bool 
-NVIsConnected (ScrnInfoPtr pScrn, int output)
-{
-    NVPtr pNv = NVPTR(pScrn);
-    CARD32 reg52C, reg608, temp;
-    Bool present;
-
-    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-               "Probing for analog device on output %s...\n", 
-                output ? "B" : "A");
-
-    reg52C = nvReadRAMDAC(pNv, output, NV_RAMDAC_052C);
-    reg608 = nvReadRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL);
-
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL, (reg608 & ~0x00010000));
-
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_052C, (reg52C & 0x0000FEEE));
-    usleep(1000);
-    
-    temp = nvReadRAMDAC(pNv, output, NV_RAMDAC_052C);
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_052C, temp | 1);
-
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_TEST_DATA, 0x94050140);
-    temp = nvReadRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL);
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL, temp | 0x1000);
-
-    usleep(1000);
-
-    present = (nvReadRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL) & (1 << 28)) ? TRUE : FALSE;
-
-    if(present)
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "  ...found one\n");
-    else
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "  ...can't find one\n");
-
-    temp = nvReadRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL);
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL, temp & 0x000EFFF);
-
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_052C, reg52C);
-    nvWriteRAMDAC(pNv, output, NV_RAMDAC_TEST_CONTROL, reg608);
-
-    return present;
-}
-
 static void
 NVSelectHeadRegisters(ScrnInfoPtr pScrn, int head)
 {
     NVPtr pNv = NVPTR(pScrn);
 
     pNv->cur_head = head;
-}
-
-static xf86MonPtr 
-NVProbeDDC (ScrnInfoPtr pScrn, int bus)
-{
-    NVPtr pNv = NVPTR(pScrn);
-    xf86MonPtr MonInfo = NULL;
-
-    if(!pNv->I2C) return NULL;
-
-    pNv->DDCBase = bus ? 0x36 : 0x3e;
-
-    xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
-               "Probing for EDID on I2C bus %s...\n", bus ? "B" : "A");
-
-    if ((MonInfo = xf86DoEDID_DDC2(pScrn->scrnIndex, pNv->I2C))) {
-       xf86DrvMsg(pScrn->scrnIndex, X_PROBED,
-                  "DDC detected a %s:\n", MonInfo->features.input_type ?
-                  "DFP" : "CRT");
-       xf86PrintEDID( MonInfo );
-    } else {
-       xf86DrvMsg(pScrn->scrnIndex, X_INFO, 
-                  "  ... none found\n");
-    }
-
-    return MonInfo;
 }
 
 static void nv3GetConfig (NVPtr pNv)
@@ -504,9 +434,12 @@ NVCommonSetup(ScrnInfoPtr pScrn)
     default:
         break;
     }
+
+    pNv->Television = FALSE;
+
 }
 
-
+#if 0
 void NVPreInitOldCode(ScrnInfoPtr pScrn)
 {
   NVPtr pNv = NVPTR(pScrn);
@@ -517,8 +450,6 @@ void NVPreInitOldCode(ScrnInfoPtr pScrn)
     int FlatPanel = -1;   /* really means the CRTC is slaved */
     Bool Television = FALSE;
     CARD16 implementation = pNv->Chipset & 0x0ff0;
-
-    pNv->Television = FALSE;
 
     if(!pNv->twoHeads) {
        pNv->CRTCnumber = 0;
@@ -748,3 +679,4 @@ void NVPreInitOldCode(ScrnInfoPtr pScrn)
     }
 }
 
+#endif

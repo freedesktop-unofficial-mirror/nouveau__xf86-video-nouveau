@@ -239,6 +239,7 @@ typedef struct _NVRec {
     volatile CARD32 *RAMHT;
     CARD32 pramin_free;
 
+    unsigned int SaveGeneration;
     uint8_t cur_head;
     XAAInfoRecPtr       AccelInfoRec;
     ExaDriverPtr	EXADriverPtr;

@@ -839,15 +839,16 @@ NVSwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
    NVPtr pNv = NVPTR(pScrn);
    Bool ret = TRUE;
 
-   if (1) { //pNv->currentMode != mode) {
+   NVFBLayout *pLayout = &pNv->CurrentLayout;
+
+   if (pLayout->mode != mode) {
       if (!NVSetMode(pScrn, mode))
          ret = FALSE;
    }
 
-   //   pI830->currentMode = mode;
+   pLayout->mode = mode;
     
     return ret;
-    //    return NVModeInit(xf86Screens[scrnIndex], mode);
 }
 
 /*
@@ -887,26 +888,30 @@ NVEnterVT(int scrnIndex, int flags)
     NVPtr pNv = NVPTR(pScrn);
     int i;
 
+    /* Save the current state */
+    if (pNv->SaveGeneration != serverGeneration) {
+	pNv->SaveGeneration = serverGeneration;
+	NVSave(pScrn);
+    }
+    
     pScrn->vtSema = TRUE;
-   for (i = 0; i < xf86_config->num_crtc; i++)
-   {
-      xf86CrtcPtr	crtc = xf86_config->crtc[i];
-
-      /* Mark that we'll need to re-set the mode for sure */
-      memset(&crtc->curMode, 0, sizeof(crtc->curMode));
-      //      if (!crtc->desiredMode.CrtcHDisplay)
-      crtc->desiredMode = *NVCrtcFindClosestMode (crtc, pScrn->currentMode);
-      
-      if (!NVCrtcSetMode (crtc, &crtc->desiredMode))
-	 return FALSE;
-      
-      NVCrtcSetBase(crtc, crtc->x, crtc->y);
-   }
-
-   //  if (!NVModeInit(pScrn, pScrn->currentMode))
-   //      return FALSE;
-   pScrn->AdjustFrame(scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
-
+    for (i = 0; i < xf86_config->num_crtc; i++)
+    {
+	xf86CrtcPtr	crtc = xf86_config->crtc[i];
+	
+	/* Mark that we'll need to re-set the mode for sure */
+	memset(&crtc->curMode, 0, sizeof(crtc->curMode));
+	//      if (!crtc->desiredMode.CrtcHDisplay)
+	crtc->desiredMode = *NVCrtcFindClosestMode (crtc, pScrn->currentMode);
+	
+	if (!NVCrtcSetMode (crtc, &crtc->desiredMode))
+	    return FALSE;
+	
+	NVCrtcSetBase(crtc, crtc->x, crtc->y);
+    }
+    
+    pScrn->AdjustFrame(scrnIndex, pScrn->frameX0, pScrn->frameY0, 0);
+    
     if(pNv->overlayAdaptor)
         NVResetVideo(pScrn);
     return TRUE;
@@ -1827,56 +1832,6 @@ NVUnmapMem(ScrnInfoPtr pScrn)
  * Initialise a new mode. 
  */
 
-static Bool
-NVModeInit(ScrnInfoPtr pScrn, DisplayModePtr mode)
-{
-    vgaHWPtr hwp = VGAHWPTR(pScrn);
-    vgaRegPtr vgaReg;
-    NVPtr pNv = NVPTR(pScrn);
-    NVRegPtr nvReg;
-
-    /* Initialise the ModeReg values */
-    if (!vgaHWInit(pScrn, mode))
-	return FALSE;
-    pScrn->vtSema = TRUE;
-
-    vgaReg = &hwp->ModeReg;
-    nvReg = &pNv->ModeReg;
-
-    if(!NVDACInit(pScrn, mode))
-        return FALSE;
-
-    NVLockUnlock(pNv, 0);
-    if(pNv->twoHeads) {
-        nvWriteVGA(pNv, NV_VGA_CRTCX_OWNER, nvReg->crtcOwner);
-        NVLockUnlock(pNv, 0);
-    }
-
-    /* Program the registers */
-    vgaHWProtect(pScrn, TRUE);
-
-    NVDACRestore(pScrn, vgaReg, nvReg, FALSE);
-
-#if X_BYTE_ORDER == X_BIG_ENDIAN
-    /* turn on LFB swapping */
-    {
-	unsigned char tmp;
-
-	tmp = nvReadVGA(pNv, NV_VGA_CRTCX_SWAPPING);
-	tmp |= (1 << 7);
-	nvWriteVGA(pNv, NV_VGA_CRTCX_SWAPPING, tmp);
-    }
-#endif
-
-    NVResetGraphics(pScrn);
-
-    vgaHWProtect(pScrn, FALSE);
-
-    pNv->CurrentLayout.mode = mode;
-
-    return TRUE;
-}
-
 /*
  * Restore the initial (text) mode.
  */
@@ -1902,100 +1857,6 @@ NVRestore(ScrnInfoPtr pScrn)
         nvWriteVGA(pNv, NV_VGA_CRTCX_OWNER, pNv->vtOWNER);
     }
     vgaHWProtect(pScrn, FALSE);
-}
-
-static void NVBacklightEnable(NVPtr pNv,  Bool on)
-{
-    /* This is done differently on each laptop.  Here we
-       define the ones we know for sure. */
-
-#if defined(__powerpc__)
-    if((pNv->Chipset == 0x10DE0179) || 
-       (pNv->Chipset == 0x10DE0189) || 
-       (pNv->Chipset == 0x10DE0329))
-    {
-       /* NV17,18,34 Apple iMac, iBook, PowerBook */
-      CARD32 tmp_pmc, tmp_pcrt;
-      tmp_pmc = nvReadMC(pNv, 0x10F0) & 0x7FFFFFFF;
-      tmp_pcrt = nvReadCRTC0(pNv, NV_CRTC_081C) & 0xFFFFFFFC;
-      if(on) {
-          tmp_pmc |= (1 << 31);
-          tmp_pcrt |= 0x1;
-      }
-      nvWriteMC(pNv, 0x10F0, tmp_pmc);
-      nvWriteCRTC0(pNv, NV_CRTC_081C, tmp_pcrt);
-    }
-#endif
-    
-    if(pNv->LVDS) {
-       if(pNv->twoHeads && ((pNv->Chipset & 0x0ff0) != CHIPSET_NV11)) {
-           nvWriteMC(pNv, 0x130C, on ? 3 : 7);
-       }
-    } else {
-       CARD32 fpcontrol;
-
-       fpcontrol = nvReadCurRAMDAC(pNv, 0x848) & 0xCfffffCC;
-
-       /* cut the TMDS output */
-       if(on) fpcontrol |= pNv->fpSyncs;
-       else fpcontrol |= 0x20000022;
-
-       nvWriteCurRAMDAC(pNv, 0x0848, fpcontrol);
-    }
-}
-
-static void
-NVDPMSSetLCD(ScrnInfoPtr pScrn, int PowerManagementMode, int flags)
-{
-  NVPtr pNv = NVPTR(pScrn);
-
-  if (!pScrn->vtSema) return;
-
-  vgaHWDPMSSet(pScrn, PowerManagementMode, flags);
-
-  switch (PowerManagementMode) {
-  case DPMSModeStandby:  /* HSync: Off, VSync: On */
-  case DPMSModeSuspend:  /* HSync: On, VSync: Off */
-  case DPMSModeOff:      /* HSync: Off, VSync: Off */
-    NVBacklightEnable(pNv, 0);
-    break;
-  case DPMSModeOn:       /* HSync: On, VSync: On */
-    NVBacklightEnable(pNv, 1);
-  default:
-    break;
-  }
-}
-
-
-static void
-NVDPMSSet(ScrnInfoPtr pScrn, int PowerManagementMode, int flags)
-{
-  unsigned char crtc1A;
-  vgaHWPtr hwp = VGAHWPTR(pScrn);
-
-  if (!pScrn->vtSema) return;
-
-  crtc1A = hwp->readCrtc(hwp, 0x1A) & ~0xC0;
-
-  switch (PowerManagementMode) {
-  case DPMSModeStandby:  /* HSync: Off, VSync: On */
-    crtc1A |= 0x80;
-    break;
-  case DPMSModeSuspend:  /* HSync: On, VSync: Off */
-    crtc1A |= 0x40;
-    break;
-  case DPMSModeOff:      /* HSync: Off, VSync: Off */
-    crtc1A |= 0xC0;
-    break;
-  case DPMSModeOn:       /* HSync: On, VSync: On */
-  default:
-    break;
-  }
-
-  /* vgaHWDPMSSet will merely cut the dac output */
-  vgaHWDPMSSet(pScrn, PowerManagementMode, flags);
-
-  hwp->writeCrtc(hwp, 0x1A, crtc1A);
 }
 
 #define DEPTH_SHIFT(val, w) ((val << (8 - w)) | (val >> ((w << 1) - 8)))
@@ -2096,20 +1957,13 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	if (!NVInitDma(pScrn))
 		return FALSE;
 
-	/* Save the current state */
-	NVSave(pScrn);
-
     pScrn->memPhysBase = pNv->VRAMPhysical;
     pScrn->fbOffset = 0;
 
     ErrorF("Calling ENTERVT\n");
 	
-	//	/* Initialise the first mode */
-	//	if (!NVModeInit(pScrn, pScrn->currentMode)) {
-	//   
 	if (!NVEnterVT(scrnIndex, 0))
 	  return FALSE;
-	//    }
 
     /* Darken the screen for aesthetic reasons and set the viewport */
 	//    NVSaveScreen(pScreen, SCREEN_SAVER_ON);
@@ -2326,7 +2180,23 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 static Bool
 NVSaveScreen(ScreenPtr pScreen, int mode)
 {
-    return vgaHWSaveScreen(pScreen, mode);
+    ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+    xf86CrtcConfigPtr   xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+    NVPtr pNv = NVPTR(pScrn);
+    int i;
+    Bool on = xf86IsUnblank(mode);
+
+    if (pScrn->vtSema) {
+	for (i = 0; i < xf86_config->num_crtc; i++) {
+	    
+	    if (xf86_config->crtc[i]->enabled) {
+		NVCrtcBlankScreen(xf86_config->crtc[i], on);
+	    }
+	}
+
+    }
+    return TRUE;
+    
 }
 
 static void

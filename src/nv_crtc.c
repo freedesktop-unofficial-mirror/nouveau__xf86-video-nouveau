@@ -923,6 +923,18 @@ nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 
     NVVgaProtect(crtc, FALSE);
     //    NVCrtcLockUnlock(crtc, 1);
+
+#if X_BYTE_ORDER == X_BIG_ENDIAN
+    /* turn on LFB swapping */
+    {
+	unsigned char tmp;
+
+	tmp = NVReadVgaCrtc(crtc, NV_VGA_CRTCX_SWAPPING);
+	tmp |= (1 << 7);
+	NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_SWAPPING, tmp);
+    }
+#endif
+
 }
 
 static const xf86CrtcFuncsRec nv_crtc_funcs = {
@@ -1461,6 +1473,23 @@ void NVCrtcLoadPalette(xf86CrtcPtr crtc)
     NVCrtcWriteDacData(crtc, regp->DAC[i]);
   }
   NVDisablePalette(crtc);
+}
+
+void NVCrtcBlankScreen(xf86CrtcPtr crtc, Bool on)
+{
+    NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+    unsigned char scrn;
+
+    scrn = NVReadVgaSeq(crtc, 0x01);
+    if (on) {
+	scrn &= ~0x20;
+    } else {
+	scrn |= 0x20;
+    }
+
+    NVVgaSeqReset(crtc, TRUE);
+    NVWriteVgaSeq(crtc, 0x01, scrn);
+    NVVgaSeqReset(crtc, FALSE);
 }
 
 /*************************************************************************** \
