@@ -449,19 +449,6 @@ NVCommonSetup(ScrnInfoPtr pScrn)
     NVLockUnlock(pNv, 0);
       
     pNv->vtOWNER = nvReadVGA(pNv, NV_VGA_CRTCX_OWNER);
-}
-
-
-void NVPreInitOldCode(ScrnInfoPtr pScrn)
-{
-  NVPtr pNv = NVPTR(pScrn);
-    xf86MonPtr monitorA, monitorB;
-    Bool mobile = FALSE;
-    Bool tvA = FALSE;
-    Bool tvB = FALSE;
-    int FlatPanel = -1;   /* really means the CRTC is slaved */
-    Bool Television = FALSE;
-    CARD16 implementation = pNv->Chipset & 0x0ff0;
 
     /* look for known laptop chips */
     /* FIXME we could add some ids here (0x0164,0x0167,0x0168,0x01D6,0x01D7,0x01D8,0x0298,0x0299,0x0398) */
@@ -512,11 +499,25 @@ void NVPreInitOldCode(ScrnInfoPtr pScrn)
     case 0x0148:
     case 0x0098:
     case 0x0099:
-        mobile = TRUE;
+        pNv->Mobile = TRUE;
         break;
     default:
         break;
     }
+}
+
+
+void NVPreInitOldCode(ScrnInfoPtr pScrn)
+{
+  NVPtr pNv = NVPTR(pScrn);
+    xf86MonPtr monitorA, monitorB;
+    Bool mobile = pNv->Mobile;
+    Bool tvA = FALSE;
+    Bool tvB = FALSE;
+    int FlatPanel = -1;   /* really means the CRTC is slaved */
+    Bool Television = FALSE;
+    CARD16 implementation = pNv->Chipset & 0x0ff0;
+
     pNv->Television = FALSE;
 
     if(!pNv->twoHeads) {

@@ -259,6 +259,7 @@ typedef struct _NVRec {
     int			videoKey;
     int			FlatPanel;
     Bool                FPDither;
+    int                 Mobile;
     Bool                Television;
     int			CRTCnumber;
 	int         vtOWNER;
