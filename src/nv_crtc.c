@@ -821,10 +821,12 @@ static void
 nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 		 DisplayModePtr adjusted_mode)
 {
+    NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
 
     nv_crtc_mode_set_vga(crtc, mode);
     nv_crtc_mode_set_regs(crtc, mode);
 
+    NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_OWNER, nv_crtc->crtc * 0x3);
     NVCrtcLockUnlock(crtc, 0);
 
     NVVgaProtect(crtc, TRUE);
