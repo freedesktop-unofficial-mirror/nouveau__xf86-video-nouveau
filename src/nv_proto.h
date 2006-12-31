@@ -105,8 +105,8 @@ Bool NVCrtcSetMode(xf86CrtcPtr crtc, DisplayModePtr pMode);
 Bool NVCrtcInUse (xf86CrtcPtr crtc);
 DisplayModePtr NVCrtcFindClosestMode(xf86CrtcPtr crtc, DisplayModePtr pMode);
 void NVCrtcSetBase (xf86CrtcPtr crtc, int x, int y);
-void nv_unload_state_ext(xf86CrtcPtr crtc);
-void nv_crtc_load_state (xf86CrtcPtr crtc);
+void nv_crtc_load_vga_state(xf86CrtcPtr crtc, RIVA_HW_STATE *state);
+void nv_crtc_load_state (xf86CrtcPtr crtc, RIVA_HW_STATE *state);
 
 #endif /* __NV_PROTO_H__ */
 

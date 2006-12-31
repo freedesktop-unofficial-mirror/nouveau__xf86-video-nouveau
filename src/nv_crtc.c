@@ -55,8 +55,8 @@
 #define BLACK_VALUE 0x00
 #define OVERSCAN_VALUE 0x01
 
-void nv_crtc_load_vga_state(xf86CrtcPtr crtc);
-void nv_crtc_load_state (xf86CrtcPtr crtc);
+void nv_crtc_load_vga_state(xf86CrtcPtr crtc, RIVA_HW_STATE *state);
+void nv_crtc_load_state (xf86CrtcPtr crtc, RIVA_HW_STATE *state);
 
 static void NVWriteMiscOut(xf86CrtcPtr crtc, CARD8 value)
 {
@@ -421,8 +421,6 @@ void nv_crtc_calc_state_ext(
 static void
 nv_crtc_dpms(xf86CrtcPtr crtc, int mode)
 {
-     ScrnInfoPtr pScrn = crtc->scrn;
-     NVPtr pNv = NVPTR(pScrn);
      NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
      unsigned char seq1 = 0, crtc17 = 0;
      unsigned char crtc1A;
@@ -909,8 +907,9 @@ static void
 nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 		 DisplayModePtr adjusted_mode)
 {
+    ScrnInfoPtr pScrn = crtc->scrn;
     NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
-
+    NVPtr pNv = NVPTR(pScrn);
     nv_crtc_mode_set_vga(crtc, mode);
     nv_crtc_mode_set_regs(crtc, mode);
 
@@ -918,8 +917,8 @@ nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
     NVCrtcLockUnlock(crtc, 0);
 
     NVVgaProtect(crtc, TRUE);
-    nv_crtc_load_state(crtc);
-    nv_crtc_load_vga_state(crtc);
+    nv_crtc_load_state(crtc, &pNv->ModeReg);
+    nv_crtc_load_vga_state(crtc, &pNv->ModeReg);
 
     NVVgaProtect(crtc, FALSE);
     //    NVCrtcLockUnlock(crtc, 1);
@@ -937,9 +936,15 @@ nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 
 }
 
+void nv_crtc_save(xf86CrtcPtr crtc)
+{
+    
+
+}
+
 static const xf86CrtcFuncsRec nv_crtc_funcs = {
     .dpms = nv_crtc_dpms,
-    .save = NULL, /* XXX */
+    .save = nv_crtc_save, /* XXX */
     .restore = NULL, /* XXX */
     .mode_fixup = nv_crtc_mode_fixup,
     .mode_set = nv_crtc_mode_set,
@@ -973,18 +978,16 @@ nv_crtc_init(ScrnInfoPtr pScrn, int crtc_num)
     crtc->driver_private = nv_crtc;
 }
 
-void nv_crtc_load_vga_state(xf86CrtcPtr crtc)
+void nv_crtc_load_vga_state(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
     ScrnInfoPtr pScrn = crtc->scrn;
     NVPtr pNv = NVPTR(pScrn);    
     NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
     int i, j;
     CARD32 temp;
-    RIVA_HW_STATE *state;
     NVCrtcRegPtr regp;
 
-    state = &pNv->ModeReg;
-    regp = &pNv->ModeReg.crtc_reg[nv_crtc->crtc];
+    regp = &state->crtc_reg[nv_crtc->crtc];
 
     NVWriteMiscOut(crtc, regp->MiscOutReg);
 
@@ -1007,18 +1010,16 @@ void nv_crtc_load_vga_state(xf86CrtcPtr crtc)
 
 }
 
-void nv_crtc_load_state(xf86CrtcPtr crtc)
+void nv_crtc_load_state(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
     ScrnInfoPtr pScrn = crtc->scrn;
     NVPtr pNv = NVPTR(pScrn);    
     NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
     int i, j;
     CARD32 temp;
-    RIVA_HW_STATE *state;
     NVCrtcRegPtr regp;
     
-    state = &pNv->ModeReg;
-    regp = &pNv->ModeReg.crtc_reg[nv_crtc->crtc];
+    regp = &state->crtc_reg[nv_crtc->crtc];
 
     if (!pNv->IRQ)
         nvWriteMC(pNv, 0x140, 0);
@@ -1449,7 +1450,7 @@ static void NVCrtcWriteDacData(xf86CrtcPtr crtc, CARD8 value)
   NV_WR08(nv_crtc->pDACReg, VGA_DAC_DATA, value);
 }
 
-static void NVCrtcReadDacData(xf86CrtcPtr crtc, CARD8 value)
+static CARD8 NVCrtcReadDacData(xf86CrtcPtr crtc, CARD8 value)
 {
   NVCrtcPrivatePtr nv_crtc = crtc->driver_private;  
 
