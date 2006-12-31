@@ -121,10 +121,67 @@ nv_output_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 
 }
 
+static Bool
+nv_ddc_detect(xf86OutputPtr output)
+{
+  NVOutputPrivatePtr nv_output = output->driver_private;
+  
+  return xf86I2CProbeAddress(nv_output->pDDCBus, 0x00A0);
+}
+
+static Bool
+nv_crt_load_detect(xf86OutputPtr output)
+{
+  NVOutputPrivatePtr nv_output = output->driver_private;
+  CARD32 reg52C, reg608, temp;
+  int present = FALSE;
+  
+  reg52C = NVReadRAMDAC(output, NV_RAMDAC_052C);
+  reg608 = NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
+
+  NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, (reg608 & ~0x00010000));
+  
+  NVWriteRAMDAC(output, NV_RAMDAC_052C, (reg52C & 0x0000FEEE));
+  usleep(1000);
+  
+  temp = NVReadRAMDAC(output, NV_RAMDAC_052C);
+  NVWriteRAMDAC(output, NV_RAMDAC_052C, temp | 1);
+
+  NVWriteRAMDAC(output, NV_RAMDAC_TEST_DATA, 0x94050140);
+  temp = NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
+  NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, temp | 0x1000);
+
+  usleep(1000);
+  
+  present = (NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL) & (1 << 28)) ? TRUE : FALSE;
+  
+  temp = NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
+  NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, temp & 0x000EFFF);
+  
+  NVWriteRAMDAC(output, NV_RAMDAC_052C, reg52C);
+  NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, reg608);
+  
+  return present;
+
+}
+
 static xf86OutputStatus
 nv_output_detect(xf86OutputPtr output)
 {
-  
+  NVOutputPrivatePtr nv_output = output->driver_private;
+
+  if (nv_output->type == OUTPUT_LVDS)
+    return XF86OutputStatusUnknown;
+
+  if (nv_output->type == OUTPUT_DVI) {
+    if (nv_ddc_detect(output))
+      return XF86OutputStatusConnected;
+
+    if (nv_crt_load_detect(output))
+      return XF86OutputStatusConnected;
+
+    return XF86OutputStatusDisconnected;
+  }
   return XF86OutputStatusUnknown;
 }
 
@@ -236,6 +293,7 @@ void NvSetupOutputs(ScrnInfoPtr pScrn)
 
   pNv->Television = FALSE;
 
+  /* work out outputs and type of outputs here */
   for (i = 0; i<num_outputs; i++) {
     output = xf86OutputCreate (pScrn, &nv_output_funcs, OutputType[output_type]);
     if (!output)
@@ -257,6 +315,23 @@ void NvSetupOutputs(ScrnInfoPtr pScrn)
 
     NV_I2CInit(pScrn, &nv_output->pDDCBus, i ? 0x36 : 0x3e, ddc_name[i]);
     
+    output->possible_crtcs = crtc_mask;
+  }
+
+  if (pNv->Mobile) {
+    output = xf86OutputCreate(pScrn, &nv_output_funcs, OutputType[OUTPUT_LVDS]);
+    if (!output)
+      return;
+
+    nv_output = xnfcalloc(sizeof(NVOutputPrivateRec), 1);
+    if (!nv_output) {
+      xf86OutputDestroy(output);
+      return;
+    }
+
+    output->driver_private = nv_output;
+    nv_output->type = output_type;
+
     output->possible_crtcs = crtc_mask;
   }
 }
