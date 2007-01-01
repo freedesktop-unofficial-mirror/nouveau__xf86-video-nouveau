@@ -313,8 +313,8 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 
     state->scale = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0xfff000ff;
     if(is_fp == 1) {
-       if(!pNv->fpScaler || (pNv->fpWidth <= mode->HDisplay)
-                         || (pNv->fpHeight <= mode->VDisplay))
+       if(!pNv->fpScaler || (nv_output->fpWidth <= mode->HDisplay)
+                         || (nv_output->fpHeight <= mode->VDisplay))
        {
            state->scale |= (1 << 8) ;
        }
@@ -333,6 +333,19 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 	       state->dither |= 1;
         } 
     }
+
+    state->cursorConfig = 0x00000100;
+    if(mode->Flags & V_DBLSCAN)
+       state->cursorConfig |= (1 << 4);
+    if(pNv->alphaCursor) {
+        if((pNv->Chipset & 0x0ff0) != CHIPSET_NV11) 
+           state->cursorConfig |= 0x04011000;
+        else
+           state->cursorConfig |= 0x14011000;
+        state->general |= (1 << 29);
+    } else
+       state->cursorConfig |= 0x02000000;
+
 
 }
 

@@ -706,6 +706,7 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
 	  is_fp = TRUE;
 	
     }
+
     regp = &pNv->ModeReg.crtc_reg[nv_crtc->crtc];    
 
     if(mode->Flags & V_INTERLACE) 
@@ -837,18 +838,6 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
           nvReg->vpll2B = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2_B);
       }
     }
-
-    nvReg->cursorConfig = 0x00000100;
-    if(mode->Flags & V_DBLSCAN)
-       nvReg->cursorConfig |= (1 << 4);
-    if(pNv->alphaCursor) {
-        if((pNv->Chipset & 0x0ff0) != CHIPSET_NV11) 
-           nvReg->cursorConfig |= 0x04011000;
-        else
-           nvReg->cursorConfig |= 0x14011000;
-        nvReg->general |= (1 << 29);
-    } else
-       nvReg->cursorConfig |= 0x02000000;
 
     regp->CRTC[NV_VGA_CRTCX_FP_HTIMING] = 0;
     regp->CRTC[NV_VGA_CRTCX_FP_VTIMING] = 0;
@@ -1031,19 +1020,10 @@ static void nv_crtc_load_state_ext(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
         nvWriteCRTC(pNv, nv_crtc->crtc, NV_CRTC_CURSOR_CONFIG, state->cursorConfig);
         nvWriteCRTC(pNv, nv_crtc->crtc, NV_CRTC_0830, state->displayV - 3);
         nvWriteCRTC(pNv, nv_crtc->crtc, NV_CRTC_0834, state->displayV - 1);
-    
-        if(pNv->FlatPanel) {
-           if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
-               nvWriteCurRAMDAC(pNv, NV_RAMDAC_DITHER_NV11, state->dither);
-           } else 
-           if(pNv->twoHeads) {
-               nvWriteCurRAMDAC(pNv, NV_RAMDAC_FP_DITHER, state->dither);
-           }
-    
-	   NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FP_HTIMING, regp->CRTC[NV_VGA_CRTCX_FP_HTIMING]);
-	   NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FP_VTIMING, regp->CRTC[NV_VGA_CRTCX_FP_VTIMING]);
-	   NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_BUFFER, 0xfa);
-        }
+	
+	NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FP_HTIMING, regp->CRTC[NV_VGA_CRTCX_FP_HTIMING]);
+	NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_FP_VTIMING, regp->CRTC[NV_VGA_CRTCX_FP_VTIMING]);
+	NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_BUFFER, 0xfa);
 
 	NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_EXTRA, regp->CRTC[NV_VGA_CRTCX_EXTRA]);
     }
