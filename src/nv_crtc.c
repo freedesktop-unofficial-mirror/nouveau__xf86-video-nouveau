@@ -678,7 +678,7 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
 {
     ScrnInfoPtr pScrn = crtc->scrn;
     NVPtr pNv = NVPTR(pScrn);
-    NVRegPtr nvReg = &pNv->ModeReg;
+    NVRegPtr state = &pNv->ModeReg;
     xf86CrtcConfigPtr   xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
     NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
     NVFBLayout *pLayout = &pNv->CurrentLayout;
@@ -813,35 +813,47 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
     if (is_fp)
       regp->CRTC[NV_VGA_CRTCX_PIXEL] |= (1 << 7);
 
-    nvReg->vpll = nvReg->pll;
-    nvReg->vpll2 = nvReg->pll;
-    nvReg->vpllB = nvReg->pllB;
-    nvReg->vpll2B = nvReg->pllB;
+    state->vpll = state->pll;
+    state->vpll2 = state->pll;
+    state->vpllB = state->pllB;
+    state->vpll2B = state->pllB;
 
     regp->CRTC[NV_VGA_CRTCX_FIFO1] = nvReadVGA(pNv, NV_VGA_CRTCX_FIFO1) & ~(1<<5);
 
     if(nv_crtc->crtc) {
-       nvReg->head  = nvReadCRTC(pNv, 0, NV_CRTC_HEAD_CONFIG) & ~0x00001000;
-       nvReg->head2 = nvReadCRTC(pNv, 1, NV_CRTC_HEAD_CONFIG) | 0x00001000;
-       nvReg->crtcOwner = 3;
-       nvReg->pllsel |= 0x20000800;
-       nvReg->vpll = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL);
+       state->head  = nvReadCRTC(pNv, 0, NV_CRTC_HEAD_CONFIG) & ~0x00001000;
+       state->head2 = nvReadCRTC(pNv, 1, NV_CRTC_HEAD_CONFIG) | 0x00001000;
+       state->crtcOwner = 3;
+       state->pllsel |= 0x20000800;
+       state->vpll = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL);
        if(pNv->twoStagePLL) 
-          nvReg->vpllB = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL_B);
+          state->vpllB = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL_B);
     } else {
       if(pNv->twoHeads) {
-	nvReg->head  =  nvReadCRTC(pNv, 0, NV_CRTC_HEAD_CONFIG) | 0x00001000;
-	nvReg->head2 =  nvReadCRTC(pNv, 1, NV_CRTC_HEAD_CONFIG) & ~0x00001000;
-	nvReg->crtcOwner = 0;
-	nvReg->vpll2 = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2);
+	state->head  =  nvReadCRTC(pNv, 0, NV_CRTC_HEAD_CONFIG) | 0x00001000;
+	state->head2 =  nvReadCRTC(pNv, 1, NV_CRTC_HEAD_CONFIG) & ~0x00001000;
+	state->crtcOwner = 0;
+	state->vpll2 = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2);
 	if(pNv->twoStagePLL) 
-          nvReg->vpll2B = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2_B);
+          state->vpll2B = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2_B);
       }
     }
 
+    state->cursorConfig = 0x00000100;
+    if(mode->Flags & V_DBLSCAN)
+       state->cursorConfig |= (1 << 4);
+    if(pNv->alphaCursor) {
+        if((pNv->Chipset & 0x0ff0) != CHIPSET_NV11) 
+           state->cursorConfig |= 0x04011000;
+        else
+           state->cursorConfig |= 0x14011000;
+        state->general |= (1 << 29);
+    } else
+       state->cursorConfig |= 0x02000000;
+
     regp->CRTC[NV_VGA_CRTCX_FP_HTIMING] = 0;
     regp->CRTC[NV_VGA_CRTCX_FP_VTIMING] = 0;
-    nvReg->displayV = mode->CrtcVDisplay;
+    state->displayV = mode->CrtcVDisplay;
 }
 
 /**

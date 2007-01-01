@@ -1412,7 +1412,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
         xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "forcing %s usage\n",
                    pNv->FlatPanel ? "DFP" : "CRTC");
     } else {
-      pNv->FlatPanel = 0;//-1;   /* autodetect later */
+      pNv->FlatPanel = -1;   /* autodetect later */
     }
 
     pNv->FPDither = FALSE;
