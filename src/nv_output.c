@@ -268,6 +268,75 @@ nv_output_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
     return TRUE;
 }
 
+static int
+nv_output_tweak_panel(xf86OutputPtr output, NVRegPtr state)
+{
+    ScrnInfoPtr pScrn = output->scrn;
+    NVPtr pNv = NVPTR(pScrn);
+    int tweak = 0;
+    
+    if (pNv->usePanelTweak) {
+	tweak = pNv->PanelTweak;
+    } else {
+	/* begin flat panel hacks */
+	/* This is unfortunate, but some chips need this register
+	   tweaked or else you get artifacts where adjacent pixels are
+	   swapped.  There are no hard rules for what to set here so all
+	   we can do is experiment and apply hacks. */
+	
+	if(((pNv->Chipset & 0xffff) == 0x0328) && (state->bpp == 32)) {
+	    /* At least one NV34 laptop needs this workaround. */
+	    tweak = -1;
+	}
+	
+	if((pNv->Chipset & 0xfff0) == CHIPSET_NV31) {
+	    tweak = 1;
+	}
+	/* end flat panel hacks */
+    }
+    return tweak;
+}
+
+static void
+nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
+{
+    NVOutputPrivatePtr nv_output = output->driver_private;
+    ScrnInfoPtr	pScrn = output->scrn;
+    NVPtr pNv = NVPTR(pScrn);
+    RIVA_HW_STATE *state;
+    Bool is_fp = FALSE;
+
+    state = &pNv->ModeReg;
+    
+    if (nv_output->mon_type == MT_LCD || nv_output->mon_type == MT_DFP)
+	is_fp = TRUE;
+
+    state->scale = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0xfff000ff;
+    if(is_fp == 1) {
+       state->pixel |= (1 << 7);
+       if(!pNv->fpScaler || (pNv->fpWidth <= mode->HDisplay)
+                         || (pNv->fpHeight <= mode->VDisplay))
+       {
+           state->scale |= (1 << 8) ;
+       }
+       state->crtcSync = NVReadRAMDAC(output, NV_RAMDAC_FP_HCRTC);
+       state->crtcSync += nv_crtc_tweak_panel(output, state);
+    }
+
+    if(pNv->twoHeads) {
+        if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
+	    state->dither = NVReadRAMDAC(output, NV_RAMDAC_DITHER_NV11) & ~0x00010000;
+           if(pNv->FPDither)
+              state->dither |= 0x00010000;
+        } else {
+	    state->dither = NVReadRAMDAC(output, NV_RAMDAC_FP_DITHER) & ~1;
+           if(pNv->FPDither)
+	       state->dither |= 1;
+        } 
+    }
+
+}
+
 static void
 nv_output_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 		  DisplayModePtr adjusted_mode)
@@ -279,6 +348,7 @@ nv_output_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 
     state = &pNv->ModeReg;
 
+    nv_output_mode_set_regs(output, mode);
     nv_output_load_state_ext(output, state);
 }
 

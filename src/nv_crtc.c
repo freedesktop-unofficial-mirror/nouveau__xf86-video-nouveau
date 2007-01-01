@@ -663,34 +663,7 @@ nv_crtc_mode_set_vga(xf86CrtcPtr crtc, DisplayModePtr mode)
 
 }
 
-static int
-nv_crtc_tweak_panel(xf86CrtcPtr crtc, NVRegPtr state)
-{
-    ScrnInfoPtr pScrn = crtc->scrn;
-    NVPtr pNv = NVPTR(pScrn);
-    int tweak = 0;
-    
-    if (pNv->usePanelTweak) {
-	tweak = pNv->PanelTweak;
-    } else {
-	/* begin flat panel hacks */
-	/* This is unfortunate, but some chips need this register
-	   tweaked or else you get artifacts where adjacent pixels are
-	   swapped.  There are no hard rules for what to set here so all
-	   we can do is experiment and apply hacks. */
-	
-	if(((pNv->Chipset & 0xffff) == 0x0328) && (state->bpp == 32)) {
-	    /* At least one NV34 laptop needs this workaround. */
-	    tweak = -1;
-	}
-	
-	if((pNv->Chipset & 0xfff0) == CHIPSET_NV31) {
-	    tweak = 1;
-	}
-	/* end flat panel hacks */
-    }
-    return tweak;
-}
+
 
 /**
  * Sets up registers for the given mode/adjusted_mode pair.
@@ -723,7 +696,6 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
     int vertTotal       =  mode->CrtcVTotal        - 2;
     int vertBlankStart  =  mode->CrtcVDisplay      - 1;
     int vertBlankEnd    =  mode->CrtcVTotal        - 1;
-    
     Bool is_fp = FALSE;
 
     for (i = 0; i < xf86_config->num_output; i++) {
@@ -837,17 +809,6 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
                     mode->Clock,
                     mode->Flags);
 
-    nvReg->scale = nvReadCurRAMDAC(pNv, NV_RAMDAC_FP_CONTROL) & 0xfff000ff;
-    if(is_fp == 1) {
-       nvReg->pixel |= (1 << 7);
-       if(!pNv->fpScaler || (pNv->fpWidth <= mode->HDisplay)
-                         || (pNv->fpHeight <= mode->VDisplay))
-       {
-           nvReg->scale |= (1 << 8) ;
-       }
-       nvReg->crtcSync = nvReadCurRAMDAC(pNv, NV_RAMDAC_FP_HCRTC);
-       nvReg->crtcSync += nv_crtc_tweak_panel(crtc, nvReg);
-    }
 
     nvReg->vpll = nvReg->pll;
     nvReg->vpll2 = nvReg->pll;
@@ -886,18 +847,6 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
         nvReg->general |= (1 << 29);
     } else
        nvReg->cursorConfig |= 0x02000000;
-
-    if(pNv->twoHeads) {
-        if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
-           nvReg->dither = nvReadCurRAMDAC(pNv, NV_RAMDAC_DITHER_NV11) & ~0x00010000;
-           if(pNv->FPDither)
-              nvReg->dither |= 0x00010000;
-        } else {
-           nvReg->dither = nvReadCurRAMDAC(pNv, NV_RAMDAC_FP_DITHER) & ~1;
-           if(pNv->FPDither)
-              nvReg->dither |= 1;
-        } 
-    }
 
     regp->CRTC[NV_VGA_CRTCX_FP_HTIMING] = 0;
     regp->CRTC[NV_VGA_CRTCX_FP_VTIMING] = 0;
