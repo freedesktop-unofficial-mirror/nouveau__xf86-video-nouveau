@@ -313,14 +313,13 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 
     state->scale = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0xfff000ff;
     if(is_fp == 1) {
-       state->pixel |= (1 << 7);
        if(!pNv->fpScaler || (pNv->fpWidth <= mode->HDisplay)
                          || (pNv->fpHeight <= mode->VDisplay))
        {
            state->scale |= (1 << 8) ;
        }
        state->crtcSync = NVReadRAMDAC(output, NV_RAMDAC_FP_HCRTC);
-       state->crtcSync += nv_crtc_tweak_panel(output, state);
+       state->crtcSync += nv_output_tweak_panel(output, state);
     }
 
     if(pNv->twoHeads) {
