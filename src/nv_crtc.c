@@ -442,11 +442,9 @@ nv_crtc_dpms(xf86CrtcPtr crtc, int mode)
        /* Screen: Off; HSync: Off, VSync: On -- Not Supported */
        seq1 = 0x20;
        crtc17 = 0x80;
-
        crtc1A |= 0x80;
        break;
      case DPMSModeSuspend:
-
        /* Screen: Off; HSync: On, VSync: Off -- Not Supported */
        seq1 = 0x20;
        crtc17 = 0x80;
@@ -466,6 +464,7 @@ nv_crtc_dpms(xf86CrtcPtr crtc, int mode)
        break;
      }
 
+     NVWriteVgaCrtc(crtc, NV_VGA_CRTCX_OWNER, nv_crtc->crtc * 0x3);
      NVWriteVgaSeq(crtc, 0x00, 0x1);
      seq1 = NVReadVgaSeq(crtc, 0x01) & ~0x20;
      NVWriteVgaSeq(crtc, 0x1, seq1);
