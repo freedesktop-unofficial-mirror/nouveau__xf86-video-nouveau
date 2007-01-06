@@ -187,6 +187,8 @@ void nv_output_save_state_ext(xf86OutputPtr output, RIVA_HW_STATE *state)
     regp->scale         = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL);
     state->config       = nvReadFB(pNv, NV_PFB_CFG0);
     
+    regp->output = NVReadRAMDAC(output, NV_RAMDAC_OUTPUT);
+
     if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
 	regp->dither = NVReadRAMDAC(output, NV_RAMDAC_DITHER_NV11);
     } else if(pNv->twoHeads) {
@@ -205,6 +207,7 @@ void nv_output_load_state_ext(xf86OutputPtr output, RIVA_HW_STATE *state)
 
     regp = &state->dac_reg[nv_output->ramdac];
 
+    NVWriteRAMDAC(output, NV_RAMDAC_OUTPUT, regp->output);
     NVWriteRAMDAC(output, NV_RAMDAC_FP_CONTROL, regp->scale);
     NVWriteRAMDAC(output, NV_RAMDAC_FP_HCRTC, regp->crtcSync);
 
@@ -369,6 +372,11 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 
     if(bpp != 8) /* DirectColor */
 	regp->general |= 0x00000030;
+
+    if (nv_output->ramdac)
+	regp->output = 0x101;
+    else
+	regp->output = 0x1;
 
 #if 0
     switch(pNv->Architecture) {

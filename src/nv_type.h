@@ -123,6 +123,7 @@ typedef struct _nv_output_reg
     CARD32 general;
     CARD32 bpp;
     CARD32 nv10_cursync;
+    CARD32 output;
 } NVOutputRegRec, *NVOutputRegPtr;
 
 typedef struct _riva_hw_state
