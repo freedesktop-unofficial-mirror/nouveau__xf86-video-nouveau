@@ -819,6 +819,11 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
     if (is_fp)
       regp->CRTC[NV_VGA_CRTCX_PIXEL] |= (1 << 7);
 
+    state->vpll = state->pll;
+    state->vpll2 = state->pll;
+    state->vpllB = state->pllB;
+    state->vpll2B = state->pllB;
+
     regp->CRTC[NV_VGA_CRTCX_FIFO1] = savep->CRTC[NV_VGA_CRTCX_FIFO1] & ~(1<<5);
 
     if(nv_crtc->crtc) {
@@ -830,6 +835,9 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
 
        regp->crtcOwner = 3;
        state->pllsel |= 0x20000800;
+       state->vpll = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL);
+       if(pNv->twoStagePLL) 
+          state->vpllB = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL_B);
     } else {
       if(pNv->twoHeads) {
 	regp->head  =  savep->head | 0x00001000;
@@ -839,6 +847,9 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
 		regp->head &= ~NV_CRTC_FSEL_FPP1;
 
 	regp->crtcOwner = 0;
+	state->vpll2 = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2);
+	if(pNv->twoStagePLL) 
+          state->vpll2B = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2_B);
       }
     }
 

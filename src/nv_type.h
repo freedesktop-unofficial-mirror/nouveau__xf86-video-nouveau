@@ -126,8 +126,6 @@ typedef struct _nv_output_reg
     CARD32 nv10_cursync;
     CARD32 output;
     CARD32 debug_0;
-    CARD32 vpll;
-    CARD32 vpllB;
 } NVOutputRegRec, *NVOutputRegPtr;
 
 typedef struct _riva_hw_state
@@ -137,6 +135,10 @@ typedef struct _riva_hw_state
     CARD32 arbitration1;
     CARD32 pll;
     CARD32 pllB;
+    CARD32 vpll;
+    CARD32 vpll2;
+    CARD32 vpllB;
+    CARD32 vpll2B;
     CARD32 pllsel;
     CARD32 config;
 

@@ -176,18 +176,13 @@ void nv_output_save_state_ext(xf86OutputPtr output, RIVA_HW_STATE *state)
 
     regp = &state->dac_reg[nv_output->ramdac];
 
-    if (nv_output->ramdac)
-    	regp->vpll         = NVReadRAMDAC0(output, NV_RAMDAC_VPLL2);
-    else
-    	regp->vpll         = NVReadRAMDAC0(output, NV_RAMDAC_VPLL);
-
+    state->vpll         = NVReadRAMDAC0(output, NV_RAMDAC_VPLL);
+    if(pNv->twoHeads)
+       state->vpll2     = NVReadRAMDAC0(output, NV_RAMDAC_VPLL2);
     if(pNv->twoStagePLL) {
-	if (nv_output->ramdac)
-            regp->vpllB    = NVReadRAMDAC0(output, NV_RAMDAC_VPLL2_B);
-	else
-            regp->vpllB    = NVReadRAMDAC0(output, NV_RAMDAC_VPLL_B);
+        state->vpllB    = NVReadRAMDAC0(output, NV_RAMDAC_VPLL_B);
+        state->vpll2B   = NVReadRAMDAC0(output, NV_RAMDAC_VPLL2_B);
     }
-
     state->pllsel       = NVReadRAMDAC0(output, NV_RAMDAC_PLL_SELECT);
     regp->general       = NVReadRAMDAC(output, NV_RAMDAC_GENERAL_CONTROL);
     regp->fp_control    = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL);
@@ -220,16 +215,12 @@ void nv_output_load_state_ext(xf86OutputPtr output, RIVA_HW_STATE *state)
     NVWriteRAMDAC(output, NV_RAMDAC_FP_HCRTC, regp->crtcSync);
     if(nv_output->mon_type == MT_CRT) {
 	NVWriteRAMDAC0(output, NV_RAMDAC_PLL_SELECT, state->pllsel);
-	if (nv_output->ramdac)
-	    NVWriteRAMDAC0(output, NV_RAMDAC_VPLL2, regp->vpll);
-	else
-	    NVWriteRAMDAC0(output, NV_RAMDAC_VPLL, regp->vpll);
-
+	NVWriteRAMDAC0(output, NV_RAMDAC_VPLL, state->vpll);
+	if(pNv->twoHeads)
+	    NVWriteRAMDAC0(output, NV_RAMDAC_VPLL2, state->vpll2);
 	if(pNv->twoStagePLL) {
-	    if (nv_output->ramdac)
-	        NVWriteRAMDAC0(output, NV_RAMDAC_VPLL2_B, regp->vpllB);
-	    else
-	        NVWriteRAMDAC0(output, NV_RAMDAC_VPLL_B, regp->vpllB);
+	    NVWriteRAMDAC0(output, NV_RAMDAC_VPLL_B, state->vpllB);
+	    NVWriteRAMDAC0(output, NV_RAMDAC_VPLL2_B, state->vpll2B);
 	}
     }
 
@@ -346,9 +337,6 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 
     if (pNv->Architecture >= NV_ARCH_10) 
       regp->nv10_cursync = savep->nv10_cursync | (1<<25);
-
-    regp->vpll = state->pll;
-    regp->vpllB = state->pllB;
 
     regp->bpp    = bpp;    /* this is not bitsPerPixel, it's 8,15,16,32 */
 
@@ -659,7 +647,7 @@ void NvSetupOutputs(ScrnInfoPtr pScrn)
       nv_output->pRAMDACReg = pNv->PRAMDAC1;
 
     NV_I2CInit(pScrn, &nv_output->pDDCBus, i ? 0x36 : 0x3e, ddc_name[i]);
-    output->possible_crtcs = crtc_mask;
+    output->possible_crtcs = (1 << i);//crtc_mask;
   }
 
   if (pNv->Mobile) {
