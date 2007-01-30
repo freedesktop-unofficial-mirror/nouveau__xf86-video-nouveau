@@ -68,42 +68,22 @@ const char *MonTypeName[7] = {
     "STV"
 };
 
-void NVWriteRAMDAC0(xf86OutputPtr output, CARD32 ramdac_reg, CARD32 val)
+void NVOutputWriteRAMDAC(xf86OutputPtr output, CARD32 ramdac_reg, CARD32 val)
 {
     NVOutputPrivatePtr nv_output = output->driver_private;
     ScrnInfoPtr	pScrn = output->scrn;
     NVPtr pNv = NVPTR(pScrn);
 
-    NV_WR32(pNv->PRAMDAC0, ramdac_reg, val);
+    nvWriteRAMDAC(pNv, nv_output->ramdac, ramdac_reg, val);
 }
 
-CARD32 NVReadRAMDAC0(xf86OutputPtr output, CARD32 ramdac_reg)
+CARD32 NVOutputReadRAMDAC(xf86OutputPtr output, CARD32 ramdac_reg)
 {
     NVOutputPrivatePtr nv_output = output->driver_private;
     ScrnInfoPtr	pScrn = output->scrn;
     NVPtr pNv = NVPTR(pScrn);
 
-    return NV_RD32(pNv->PRAMDAC0, ramdac_reg);
-}
-
-void NVWriteRAMDAC(xf86OutputPtr output, CARD32 ramdac_reg, CARD32 val)
-{
-    NVOutputPrivatePtr nv_output = output->driver_private;
-    ScrnInfoPtr	pScrn = output->scrn;
-    NVPtr pNv = NVPTR(pScrn);
-    volatile CARD32 *pRAMDACReg = nv_output->ramdac ? pNv->PRAMDAC1 : pNv->PRAMDAC0;
-
-    NV_WR32(pRAMDACReg, ramdac_reg, val);
-}
-
-CARD32 NVReadRAMDAC(xf86OutputPtr output, CARD32 ramdac_reg)
-{
-    NVOutputPrivatePtr nv_output = output->driver_private;
-    ScrnInfoPtr	pScrn = output->scrn;
-    NVPtr pNv = NVPTR(pScrn);
-    volatile CARD32 *pRAMDACReg = nv_output->ramdac ? pNv->PRAMDAC1 : pNv->PRAMDAC0;
-
-    return NV_RD32(pRAMDACReg, ramdac_reg);
+    return nvReadRAMDAC(pNv, nv_output->ramdac, ramdac_reg);
 }
 
 static void nv_output_backlight_enable(xf86OutputPtr output,  Bool on)
@@ -158,7 +138,7 @@ nv_output_dpms(xf86OutputPtr output, int mode)
     if (nv_output->type == OUTPUT_DVI) {
 	CARD32 fpcontrol;
 
-	fpcontrol = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0xCfffffCC;	
+	fpcontrol = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0xCfffffCC;	
 	switch(mode) {
 	case DPMSModeStandby:
 	case DPMSModeSuspend:
@@ -170,7 +150,7 @@ nv_output_dpms(xf86OutputPtr output, int mode)
 	    fpcontrol |= nv_output->fpSyncs;
 	}
 	
-	NVWriteRAMDAC(output, NV_RAMDAC_FP_CONTROL, fpcontrol);
+	NVOutputWriteRAMDAC(output, NV_RAMDAC_FP_CONTROL, fpcontrol);
     }
 
 }
@@ -184,28 +164,28 @@ void nv_output_save_state_ext(xf86OutputPtr output, RIVA_HW_STATE *state)
 
     regp = &state->dac_reg[nv_output->ramdac];
 
-    state->vpll         = NVReadRAMDAC0(output, NV_RAMDAC_VPLL);
+    state->vpll         = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL);
     if(pNv->twoHeads)
-	state->vpll2     = NVReadRAMDAC0(output, NV_RAMDAC_VPLL2);
+	state->vpll2     = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2);
     if(pNv->twoStagePLL) {
-        state->vpllB    = NVReadRAMDAC0(output, NV_RAMDAC_VPLL_B);
-        state->vpll2B   = NVReadRAMDAC0(output, NV_RAMDAC_VPLL2_B);
+        state->vpllB    = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL_B);
+        state->vpll2B   = nvReadRAMDAC0(pNv, NV_RAMDAC_VPLL2_B);
     }
-    state->pllsel       = NVReadRAMDAC0(output, NV_RAMDAC_PLL_SELECT);
-    regp->general       = NVReadRAMDAC(output, NV_RAMDAC_GENERAL_CONTROL);
-    regp->fp_control    = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL);
-    regp->debug_0	= NVReadRAMDAC(output, NV_RAMDAC_FP_DEBUG_0);
+    state->pllsel       = nvReadRAMDAC0(pNv, NV_RAMDAC_PLL_SELECT);
+    regp->general       = NVOutputReadRAMDAC(output, NV_RAMDAC_GENERAL_CONTROL);
+    regp->fp_control    = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_CONTROL);
+    regp->debug_0	= NVOutputReadRAMDAC(output, NV_RAMDAC_FP_DEBUG_0);
     state->config       = nvReadFB(pNv, NV_PFB_CFG0);
     
-    regp->output = NVReadRAMDAC(output, NV_RAMDAC_OUTPUT);
+    regp->output = NVOutputReadRAMDAC(output, NV_RAMDAC_OUTPUT);
     
     if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
-	regp->dither = NVReadRAMDAC(output, NV_RAMDAC_DITHER_NV11);
+	regp->dither = NVOutputReadRAMDAC(output, NV_RAMDAC_DITHER_NV11);
     } else if(pNv->twoHeads) {
-	regp->dither = NVReadRAMDAC(output, NV_RAMDAC_FP_DITHER);
+	regp->dither = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_DITHER);
     }
-    regp->crtcSync = NVReadRAMDAC(output, NV_RAMDAC_FP_HCRTC);
-    regp->nv10_cursync = NVReadRAMDAC(output, NV_RAMDAC_NV10_CURSYNC);
+    regp->crtcSync = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_HCRTC);
+    regp->nv10_cursync = NVOutputReadRAMDAC(output, NV_RAMDAC_NV10_CURSYNC);
 }
 
 void nv_output_load_state_ext(xf86OutputPtr output, RIVA_HW_STATE *state)
@@ -217,38 +197,37 @@ void nv_output_load_state_ext(xf86OutputPtr output, RIVA_HW_STATE *state)
   
     regp = &state->dac_reg[nv_output->ramdac];
   
-    NVWriteRAMDAC(output, NV_RAMDAC_FP_DEBUG_0, regp->debug_0);
-    NVWriteRAMDAC(output, NV_RAMDAC_OUTPUT, regp->output);
-    NVWriteRAMDAC(output, NV_RAMDAC_FP_CONTROL, regp->fp_control);
-    NVWriteRAMDAC(output, NV_RAMDAC_FP_HCRTC, regp->crtcSync);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_FP_DEBUG_0, regp->debug_0);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_OUTPUT, regp->output);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_FP_CONTROL, regp->fp_control);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_FP_HCRTC, regp->crtcSync);
   
-    NVWriteRAMDAC0(output, NV_RAMDAC_PLL_SELECT, state->pllsel);
+    nvWriteRAMDAC0(pNv, NV_RAMDAC_PLL_SELECT, state->pllsel);
 
     ErrorF("writting vpll %08X\n", state->vpll);
     ErrorF("writting vpll2 %08X\n", state->vpll2);
-    NVWriteRAMDAC0(output, NV_RAMDAC_VPLL, state->vpll);
+    nvWriteRAMDAC0(pNv, NV_RAMDAC_VPLL, state->vpll);
     if(pNv->twoHeads)
-	NVWriteRAMDAC0(output, NV_RAMDAC_VPLL2, state->vpll2);
+	nvWriteRAMDAC0(pNv, NV_RAMDAC_VPLL2, state->vpll2);
     if(pNv->twoStagePLL) {
-	NVWriteRAMDAC0(output, NV_RAMDAC_VPLL_B, state->vpllB);
-	NVWriteRAMDAC0(output, NV_RAMDAC_VPLL2_B, state->vpll2B);
+	nvWriteRAMDAC0(pNv, NV_RAMDAC_VPLL_B, state->vpllB);
+	nvWriteRAMDAC0(pNv, NV_RAMDAC_VPLL2_B, state->vpll2B);
     }
     
     if((pNv->Chipset & 0x0ff0) == CHIPSET_NV11) {
-	NVWriteRAMDAC(output, NV_RAMDAC_DITHER_NV11, regp->dither);
+	NVOutputWriteRAMDAC(output, NV_RAMDAC_DITHER_NV11, regp->dither);
     } else if(pNv->twoHeads) {
-	NVWriteRAMDAC(output, NV_RAMDAC_FP_DITHER, regp->dither);
+	NVOutputWriteRAMDAC(output, NV_RAMDAC_FP_DITHER, regp->dither);
     }
   
-    NVWriteRAMDAC(output, NV_RAMDAC_GENERAL_CONTROL, regp->general);
-    NVWriteRAMDAC(output, NV_RAMDAC_NV10_CURSYNC, regp->nv10_cursync);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_GENERAL_CONTROL, regp->general);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_NV10_CURSYNC, regp->nv10_cursync);
 }
 
 
 static void
 nv_output_save (xf86OutputPtr output)
 {
-    NVOutputPrivatePtr nv_output = output->driver_private;
     ScrnInfoPtr	pScrn = output->scrn;
     NVPtr pNv = NVPTR(pScrn);
     RIVA_HW_STATE *state;
@@ -262,7 +241,6 @@ nv_output_save (xf86OutputPtr output)
 static void
 nv_output_restore (xf86OutputPtr output)
 {
-    NVOutputPrivatePtr nv_output = output->driver_private;
     ScrnInfoPtr	pScrn = output->scrn;
     NVPtr pNv = NVPTR(pScrn);
     RIVA_HW_STATE *state;
@@ -428,7 +406,7 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 	    state->vpllB = state->pllB;
 	}
 
-	ErrorF("output%d: %04X: twocrt %d twomon %d\n", nv_output->ramdac, regp->output, two_crt, two_mon);
+	ErrorF("crtc %d output%d: %04X: twocrt %d twomon %d\n", nv_crtc->crtc, nv_output->ramdac, regp->output, two_crt, two_mon);
     }
 }
 
@@ -436,7 +414,6 @@ static void
 nv_output_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 		   DisplayModePtr adjusted_mode)
 {
-    NVOutputPrivatePtr nv_output = output->driver_private;
     ScrnInfoPtr	pScrn = output->scrn;
     NVPtr pNv = NVPTR(pScrn);
     RIVA_HW_STATE *state;
@@ -458,34 +435,33 @@ nv_ddc_detect(xf86OutputPtr output)
 static Bool
 nv_crt_load_detect(xf86OutputPtr output)
 {
-    NVOutputPrivatePtr nv_output = output->driver_private;
     CARD32 reg_output, reg_test_ctrl, temp;
     int present = FALSE;
 	  
-    reg_output = NVReadRAMDAC(output, NV_RAMDAC_OUTPUT);
-    reg_test_ctrl = NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
+    reg_output = NVOutputReadRAMDAC(output, NV_RAMDAC_OUTPUT);
+    reg_test_ctrl = NVOutputReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
 
-    NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, (reg_test_ctrl & ~0x00010000));
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, (reg_test_ctrl & ~0x00010000));
 	  
-    NVWriteRAMDAC(output, NV_RAMDAC_OUTPUT, (reg_output & 0x0000FEEE));
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_OUTPUT, (reg_output & 0x0000FEEE));
     usleep(1000);
 	  
-    temp = NVReadRAMDAC(output, NV_RAMDAC_OUTPUT);
-    NVWriteRAMDAC(output, NV_RAMDAC_OUTPUT, temp | 1);
+    temp = NVOutputReadRAMDAC(output, NV_RAMDAC_OUTPUT);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_OUTPUT, temp | 1);
 
-    NVWriteRAMDAC(output, NV_RAMDAC_TEST_DATA, 0x94050140);
-    temp = NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
-    NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, temp | 0x1000);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_TEST_DATA, 0x94050140);
+    temp = NVOutputReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, temp | 0x1000);
 
     usleep(1000);
 	  
-    present = (NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL) & (1 << 28)) ? TRUE : FALSE;
+    present = (NVOutputReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL) & (1 << 28)) ? TRUE : FALSE;
 	  
-    temp = NVReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
-    NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, temp & 0x000EFFF);
+    temp = NVOutputReadRAMDAC(output, NV_RAMDAC_TEST_CONTROL);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, temp & 0x000EFFF);
 	  
-    NVWriteRAMDAC(output, NV_RAMDAC_OUTPUT, reg_output);
-    NVWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, reg_test_ctrl);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_OUTPUT, reg_output);
+    NVOutputWriteRAMDAC(output, NV_RAMDAC_TEST_CONTROL, reg_test_ctrl);
 	  
     return present;
 
@@ -532,9 +508,9 @@ nv_output_get_modes(xf86OutputPtr output)
 	nv_output->mon_type = MT_CRT;
 
     if (nv_output->mon_type == MT_DFP) {
-	nv_output->fpWidth = NVReadRAMDAC(output, NV_RAMDAC_FP_HDISP_END) + 1;
-	nv_output->fpHeight = NVReadRAMDAC(output, NV_RAMDAC_FP_VDISP_END) + 1;
-	nv_output->fpSyncs = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0x30000033;
+	nv_output->fpWidth = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_HDISP_END) + 1;
+	nv_output->fpHeight = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_VDISP_END) + 1;
+	nv_output->fpSyncs = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0x30000033;
 	xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Panel size is %i x %i\n",
 		   nv_output->fpWidth, nv_output->fpHeight);
 
@@ -575,9 +551,9 @@ nv_output_lvds_get_modes(xf86OutputPtr output)
     ScrnInfoPtr	pScrn = output->scrn;
     NVOutputPrivatePtr nv_output = output->driver_private;
 
-    nv_output->fpWidth = NVReadRAMDAC(output, NV_RAMDAC_FP_HDISP_END) + 1;
-    nv_output->fpHeight = NVReadRAMDAC(output, NV_RAMDAC_FP_VDISP_END) + 1;
-    nv_output->fpSyncs = NVReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0x30000033;
+    nv_output->fpWidth = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_HDISP_END) + 1;
+    nv_output->fpHeight = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_VDISP_END) + 1;
+    nv_output->fpSyncs = NVOutputReadRAMDAC(output, NV_RAMDAC_FP_CONTROL) & 0x30000033;
     xf86DrvMsg(pScrn->scrnIndex, X_PROBED, "Panel size is %i x %i\n",
 	       nv_output->fpWidth, nv_output->fpHeight);
 

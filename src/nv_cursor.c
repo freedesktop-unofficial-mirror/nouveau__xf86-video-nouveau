@@ -182,7 +182,7 @@ NVSetCursorPosition(ScrnInfoPtr pScrn, int x, int y)
 
     for (o = 0; o < xf86_config->num_output; o++)
     {
-      xf86OutputPtr output = xf86_config->output[o], cur_output;
+      xf86OutputPtr output = xf86_config->output[o];
 
       if (!output->crtc)
 	continue;
@@ -209,10 +209,9 @@ NVSetCursorPosition(ScrnInfoPtr pScrn, int x, int y)
       temp |= ((thisx & CURSOR_POS_MASK) << CURSOR_X_SHIFT);
       temp |= ((thisy & CURSOR_POS_MASK) << CURSOR_Y_SHIFT);
       
-	nv_crtc = output->crtc->driver_private;
-      cur_output = xf86_config->output[nv_crtc->crtc];
+      nv_crtc = output->crtc->driver_private;
 
-      NVWriteRAMDAC(cur_output, NV_RAMDAC_CURSOR_POS, temp);
+      nvWriteRAMDAC(pNv, nv_crtc->crtc, NV_RAMDAC_CURSOR_POS, temp);
       
       crtc->cursorInRange = inrange;
 
