@@ -32,9 +32,9 @@
 #include "xf86DDC.h"
 #include "fb.h"
 #include "windowstr.h"
-#include "i830_xf86Crtc.h"
-#include "i830_xf86Modes.h"
-#include "i830_randr.h"
+#include "nv_xf86Crtc.h"
+#include "nv_xf86Modes.h"
+#include "nv_randr.h"
 #include "X11/extensions/render.h"
 #define DPMS_SERVER
 #include "X11/extensions/dpms.h"
