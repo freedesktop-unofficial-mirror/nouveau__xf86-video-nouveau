@@ -15,7 +15,7 @@
 #include "dri.h"
 #include <stdint.h>
 #include "nouveau_drm.h"
-#include "nv_xf86Crtc.h"
+#include "xf86Crtc.h"
 #else
 #error "This driver requires a DRI-enabled X server"
 #endif

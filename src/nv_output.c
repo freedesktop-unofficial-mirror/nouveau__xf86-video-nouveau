@@ -44,10 +44,9 @@
 #include <randrstr.h>
 #include <X11/extensions/render.h>
 
-#include "nv_xf86Crtc.h"
+#include "xf86Crtc.h"
 #include "nv_randr.h"
 #include "nv_include.h"
-#include "nv_xf86Modes.h"
 
 const char *OutputType[] = {
     "None",
@@ -498,13 +497,13 @@ nv_output_get_modes(xf86OutputPtr output)
     int i;
 
 
-    ddc_mon = nv_xf86OutputGetEDID(output, nv_output->pDDCBus);
-    nv_xf86OutputSetEDID(output, ddc_mon);
+    ddc_mon = xf86OutputGetEDID(output, nv_output->pDDCBus);
+    xf86OutputSetEDID(output, ddc_mon);
     if (ddc_mon == NULL) {
 	return NULL;
     }
 
-    ddc_modes = nv_xf86OutputGetEDIDModes (output);	  
+    ddc_modes = xf86OutputGetEDIDModes (output);	  
     /* check if a CRT or DFP */
     if (ddc_mon->features.input_type)
 	nv_output->mon_type = MT_DFP;

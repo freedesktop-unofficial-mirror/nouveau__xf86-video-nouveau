@@ -42,7 +42,7 @@
 #include <randrstr.h>
 #include <X11/extensions/render.h>
 
-#include "nv_xf86Crtc.h"
+#include "xf86Crtc.h"
 #include "nv_randr.h"
 #include "nv_include.h"
 
