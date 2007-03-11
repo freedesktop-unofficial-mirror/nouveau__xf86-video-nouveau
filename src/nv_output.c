@@ -399,7 +399,7 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 	else 
   	    regp->output = NV_RAMDAC_OUTPUT_DAC_ENABLE;
 
-	if (nv_crtc->crtc == 1 && (two_crt == TRUE))
+	if (nv_crtc->crtc == 1 && two_mon)
 	  regp->output |= NV_RAMDAC_OUTPUT_SELECT_CRTC2;
 
 	if (nv_crtc->crtc == 1 && two_mon) {
@@ -408,6 +408,10 @@ nv_output_mode_set_regs(xf86OutputPtr output, DisplayModePtr mode)
 	    state->pllsel |= (1<<29) | (1<<11);
 	}
 	else {
+	  /* setting this bit affects the TMDS PLL by the looks of it */
+	  //state->pllsel |=  NV_RAMDAC_PLL_SELECT_VCLK_RATIO_DB2
+	  state->pllsel &= ~NV_RAMDAC_PLL_SELECT_VCLK_RATIO_DB2;
+	    state->pllsel |= NV_RAMDAC_PLL_SELECT_PLL_SOURCE_ALL;
 	    state->vpll = state->pll;
 	    state->vpllB = state->pllB;
 	}

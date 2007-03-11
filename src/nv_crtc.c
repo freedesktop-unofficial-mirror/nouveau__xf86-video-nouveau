@@ -442,7 +442,7 @@ void nv_crtc_calc_state_ext(
 	    if (flags & V_DBLSCAN) 
 		regp->CRTC[NV_VGA_CRTCX_CURCTL1]|= 2;
 
-            state->pllsel |= NV_RAMDAC_PLL_SELECT_VCLK_RATIO_DB2 | NV_RAMDAC_PLL_SELECT_PLL_SOURCE_ALL;
+
             state->config   = nvReadFB(pNv, NV_PFB_CFG0);
             regp->CRTC[NV_VGA_CRTCX_REPAINT1] = hDisplaySize < 1280 ? 0x04 : 0x00;
             break;
