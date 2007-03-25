@@ -1506,7 +1506,7 @@ static unsigned int nv_find_dcb_table(ScrnInfoPtr pScrn, bios_t *bios)
 {
         NVPtr pNv = NVPTR(pScrn);
 	CARD16 bufloc;
-	int is_g5;
+	int is_g5 = 0;
 	CARD32 sig;
 	char *table2;
 	unsigned char headerSize, entries;
