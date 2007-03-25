@@ -31,6 +31,7 @@
  *       * PLL algorithms.
  */
 
+#include <byteswap.h>
 typedef struct {
 	Bool execute;
 	Bool repeat;
@@ -1530,14 +1531,22 @@ static unsigned int nv_find_dcb_table(ScrnInfoPtr pScrn, bios_t *bios)
 		return 0;
 
 	header_word = *(uint32_t *)table2;
-	headerSize = (header_word >> 8) & 0xff;
-	entries = (header_word >> 16) & 0xff;
+	if (is_g5) {
+		headerSize = 0x3c;
+		entries = 0xa;
+	} else {
+		headerSize = (header_word >> 8) & 0xff;
+		entries = (header_word >> 16) & 0xff;
+	}
 	
 	if (entries >= NV40_NUM_DCB_ENTRIES)
 		entries = NV40_NUM_DCB_ENTRIES;
 
 	for (i = 0; i < entries; i++) {
-		pNv->dcb_table[i] = *(uint32_t *)&table2[headerSize + 8 * i];
+		if (is_g5)
+			pNv->dcb_table[i] = __bswap_32(*(uint32_t *)&table2[headerSize + 8 * i]);
+		else
+			pNv->dcb_table[i] = *(uint32_t *)&table2[headerSize + 8 * i];
 	}
 
 	return entries;
