@@ -549,7 +549,7 @@ nv_analog_output_detect(xf86OutputPtr output)
 	return XF86OutputStatusConnected;
 
     /* seems a bit flaky on ramdac 1 */
-    if (nv_crt_load_detect(output) && (nv_output->ramdac == 0))
+    if ((nv_output->ramdac==0) && nv_crt_load_detect(output))
 	return XF86OutputStatusConnected;
     
     return XF86OutputStatusDisconnected;
