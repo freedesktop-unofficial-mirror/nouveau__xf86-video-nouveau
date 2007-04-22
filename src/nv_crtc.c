@@ -985,6 +985,7 @@ nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
     NVVgaProtect(crtc, FALSE);
     //    NVCrtcLockUnlock(crtc, 1);
 
+    NVCrtcSetBase(crtc, x, y);
 #if X_BYTE_ORDER == X_BIG_ENDIAN
     /* turn on LFB swapping */
     {
