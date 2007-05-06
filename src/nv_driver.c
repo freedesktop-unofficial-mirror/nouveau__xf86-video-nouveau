@@ -1752,13 +1752,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     pNv->CurrentLayout.weight.blue = pScrn->weight.blue;
     pNv->CurrentLayout.mode = pScrn->currentMode;
 
-    if (!xf86RandR12PreInit (pScrn))
-    {
-	xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "RandR initialization failure\n");
-	PreInitCleanup(pScrn);
-	return FALSE;
-    }	
-    
     if (pScrn->modes == NULL) {
 	xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No modes.\n");
 	PreInitCleanup(pScrn);
