@@ -370,8 +370,6 @@ Bool NVInitDma(ScrnInfoPtr pScrn)
 
 	NVInitDmaCB(pScrn);
 
-	if(pNv->NoAccel) return TRUE;
-
 	if (drmCommandWriteRead(pNv->drm_fd, DRM_NOUVEAU_FIFO_ALLOC, &pNv->fifo, sizeof(pNv->fifo)) != 0) {
 		xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "Could not initialise kernel module\n");
 		return FALSE;

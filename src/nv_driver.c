@@ -1086,6 +1086,66 @@ static const xf86CrtcConfigFuncsRec nv_xf86crtc_config_funcs = {
     nv_xf86crtc_resize
 };
 
+static Bool
+NVDetermineChipsetArch(ScrnInfoPtr pScrn)
+{
+    NVPtr pNv = NVPTR(pScrn);
+
+    switch (pNv->Chipset & 0x0ff0) {
+    case CHIPSET_NV03:   /* Riva128 */
+         pNv->Architecture =  NV_ARCH_03;
+         break;
+    case CHIPSET_NV04:   /* TNT/TNT2 */
+         pNv->Architecture =  NV_ARCH_04;
+         break;
+    case CHIPSET_NV10:   /* GeForce 256 */
+    case CHIPSET_NV11:   /* GeForce2 MX */
+    case CHIPSET_NV15:   /* GeForce2 */
+    case CHIPSET_NV17:   /* GeForce4 MX */
+    case CHIPSET_NV18:   /* GeForce4 MX (8x AGP) */
+    case CHIPSET_NFORCE: /* nForce */
+    case CHIPSET_NFORCE2:/* nForce2 */
+         pNv->Architecture =  NV_ARCH_10;
+         break;
+    case CHIPSET_NV20:   /* GeForce3 */
+    case CHIPSET_NV25:   /* GeForce4 Ti */
+    case CHIPSET_NV28:   /* GeForce4 Ti (8x AGP) */
+         pNv->Architecture =  NV_ARCH_20;
+         break;
+    case CHIPSET_NV30:   /* GeForceFX 5800 */
+    case CHIPSET_NV31:   /* GeForceFX 5600 */
+    case CHIPSET_NV34:   /* GeForceFX 5200 */
+    case CHIPSET_NV35:   /* GeForceFX 5900 */
+    case CHIPSET_NV36:   /* GeForceFX 5700 */
+         pNv->Architecture =  NV_ARCH_30;
+         break;
+    case CHIPSET_NV40:   /* GeForce 6800 */
+    case CHIPSET_NV41:   /* GeForce 6800 */
+    case 0x0120:   /* GeForce 6800 */
+    case CHIPSET_NV43:   /* GeForce 6600 */
+    case CHIPSET_NV44:   /* GeForce 6200 */
+    case CHIPSET_G72:   /* GeForce 7200, 7300, 7400 */
+    case CHIPSET_G70:   /* GeForce 7800 */
+    case CHIPSET_NV45:   /* GeForce 6800 */
+    case CHIPSET_NV44A:   /* GeForce 6200 */
+    case CHIPSET_G71:   /* GeForce 7900 */
+    case CHIPSET_G73:   /* GeForce 7600 */
+    case CHIPSET_C51:   /* GeForce 6100 */
+    case CHIPSET_C512: /* Geforce 6100 (nForce 4xx) */
+         pNv->Architecture =  NV_ARCH_40;
+         break;
+    case CHIPSET_NV50:
+    case CHIPSET_NV84:
+	 pNv->Architecture =  NV_ARCH_50;
+	 break;
+    default:           /* Unknown, probably >=NV40 */
+         pNv->Architecture =  NV_ARCH_40;
+         break;
+    }
+
+    return TRUE;
+}
+
 /* Mandatory */
 Bool
 NVPreInit(ScrnInfoPtr pScrn, int flags)
@@ -1218,7 +1278,7 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     }
 
     xf86DrvMsg(pScrn->scrnIndex, from, "Chipset: \"%s\"\n", pScrn->chipset);
-
+    NVDetermineChipsetArch(pScrn);
 
     /*
      * The first thing we should figure out is the depth, bpp, etc.
@@ -1335,7 +1395,12 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     if (xf86ReturnOptValBool(pNv->Options, OPTION_NOACCEL, FALSE)) {
 	pNv->NoAccel = TRUE;
 	xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "Acceleration disabled\n");
+    } else if (pNv->Architecture == NV_ARCH_50) {
+	pNv->NoAccel = TRUE;
+	xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+		   "NV50 detected, acceleration not currently supported\n");
     }
+
     if (xf86ReturnOptValBool(pNv->Options, OPTION_SHADOW_FB, FALSE)) {
 	pNv->ShadowFB = TRUE;
 	pNv->NoAccel = TRUE;
@@ -1501,58 +1566,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	xf86FreeInt10(pNv->pInt);
 	NVFreeRec(pScrn);
 	return FALSE;
-    }
-
-    switch (pNv->Chipset & 0x0ff0) {
-    case CHIPSET_NV03:   /* Riva128 */
-         pNv->Architecture =  NV_ARCH_03;
-         break;
-    case CHIPSET_NV04:   /* TNT/TNT2 */
-         pNv->Architecture =  NV_ARCH_04;
-         break;
-    case CHIPSET_NV10:   /* GeForce 256 */
-    case CHIPSET_NV11:   /* GeForce2 MX */
-    case CHIPSET_NV15:   /* GeForce2 */
-    case CHIPSET_NV17:   /* GeForce4 MX */
-    case CHIPSET_NV18:   /* GeForce4 MX (8x AGP) */
-    case CHIPSET_NFORCE: /* nForce */
-    case CHIPSET_NFORCE2:/* nForce2 */
-         pNv->Architecture =  NV_ARCH_10;
-         break;
-    case CHIPSET_NV20:   /* GeForce3 */
-    case CHIPSET_NV25:   /* GeForce4 Ti */
-    case CHIPSET_NV28:   /* GeForce4 Ti (8x AGP) */
-         pNv->Architecture =  NV_ARCH_20;
-         break;
-    case CHIPSET_NV30:   /* GeForceFX 5800 */
-    case CHIPSET_NV31:   /* GeForceFX 5600 */
-    case CHIPSET_NV34:   /* GeForceFX 5200 */
-    case CHIPSET_NV35:   /* GeForceFX 5900 */
-    case CHIPSET_NV36:   /* GeForceFX 5700 */
-         pNv->Architecture =  NV_ARCH_30;
-         break;
-    case CHIPSET_NV40:   /* GeForce 6800 */
-    case CHIPSET_NV41:   /* GeForce 6800 */
-    case 0x0120:   /* GeForce 6800 */
-    case CHIPSET_NV43:   /* GeForce 6600 */
-    case CHIPSET_NV44:   /* GeForce 6200 */
-    case CHIPSET_G72:   /* GeForce 7200, 7300, 7400 */
-    case CHIPSET_G70:   /* GeForce 7800 */
-    case CHIPSET_NV45:   /* GeForce 6800 */
-    case CHIPSET_NV44A:   /* GeForce 6200 */
-    case CHIPSET_G71:   /* GeForce 7900 */
-    case CHIPSET_G73:   /* GeForce 7600 */
-    case CHIPSET_C51:   /* GeForce 6100 */
-    case CHIPSET_C512: /* Geforce 6100 (nForce 4xx) */
-         pNv->Architecture =  NV_ARCH_40;
-         break;
-    case CHIPSET_NV50:
-    case CHIPSET_NV84:
-	 pNv->Architecture =  NV_ARCH_50;
-	 break;
-    default:           /* Unknown, probably >=NV40 */
-         pNv->Architecture =  NV_ARCH_40;
-         break;
     }
 
     pNv->alphaCursor = (pNv->Architecture >= NV_ARCH_10) &&
@@ -1994,13 +2007,15 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	if (!NVMapMem(pScrn))
 		return FALSE;
 
-	/* Init DRM - Alloc FIFO */
-	if (!NVInitDma(pScrn))
-		return FALSE;
+	if (!pNv->NoAccel) {
+		/* Init DRM - Alloc FIFO */
+		if (!NVInitDma(pScrn))
+			return FALSE;
 
-	/* setup graphics objects */
-	if (!NVAccelCommonInit(pScrn))
-		return FALSE;
+		/* setup graphics objects */
+		if (!NVAccelCommonInit(pScrn))
+			return FALSE;
+	}
 
 	pScrn->memPhysBase = pNv->VRAMPhysical;
 	pScrn->fbOffset = 0;
