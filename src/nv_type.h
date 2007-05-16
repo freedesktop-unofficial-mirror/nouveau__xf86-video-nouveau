@@ -28,6 +28,7 @@
 #define NV_ARCH_20  0x20
 #define NV_ARCH_30  0x30
 #define NV_ARCH_40  0x40
+#define NV_ARCH_50  0x50
 
 #define CHIPSET_NV03     0x0010
 #define CHIPSET_NV04     0x0020
@@ -52,6 +53,8 @@
 #define CHIPSET_NV44     0x0160
 #define CHIPSET_NV44A    0x0220
 #define CHIPSET_NV45     0x0210
+#define CHIPSET_NV50     0x0190
+#define CHIPSET_NV84     0x0400
 #define CHIPSET_MISC_BRIDGED  0x00F0
 #define CHIPSET_G70      0x0090
 #define CHIPSET_G71      0x0290

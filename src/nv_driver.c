@@ -1546,6 +1546,10 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
     case CHIPSET_C512: /* Geforce 6100 (nForce 4xx) */
          pNv->Architecture =  NV_ARCH_40;
          break;
+    case CHIPSET_NV50:
+    case CHIPSET_NV84:
+	 pNv->Architecture =  NV_ARCH_50;
+	 break;
     default:           /* Unknown, probably >=NV40 */
          pNv->Architecture =  NV_ARCH_40;
          break;
