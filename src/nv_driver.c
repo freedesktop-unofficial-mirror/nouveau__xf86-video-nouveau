@@ -33,6 +33,8 @@
 
 #include "xf86drm.h"
 
+extern DisplayModePtr xf86ModesAdd(DisplayModePtr Modes, DisplayModePtr Additions);
+
 /*const   OptionInfoRec * RivaAvailableOptions(int chipid, int busid);
 Bool    RivaGetScrnInfoRec(PciChipsets *chips, int chip);*/
 
@@ -1811,8 +1813,8 @@ NVMapMem(ScrnInfoPtr pScrn)
 		return FALSE;
 	}
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		   "Allocated %dMiB VRAM for framebuffer + offscreen pixmaps at %08X\n",
-		   pNv->FB->size >> 20, pNv->FB->offset);
+		   "Allocated %dMiB VRAM for framebuffer + offscreen pixmaps\n",
+		   (unsigned int)(pNv->FB->size >> 20));
 
 	/*XXX: have to get these after we've allocated something, otherwise
 	 *     they're uninitialised in the DRM!
@@ -1828,8 +1830,8 @@ NVMapMem(ScrnInfoPtr pScrn)
 		int gart_scratch_size;
 
 		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-			   "AGP: %dMiB available\n",
-			   (unsigned int) pNv->AGPSize >> 20);
+			   "GART: %dMiB available\n",
+			   (unsigned int)(pNv->AGPSize >> 20));
 
 		if (pNv->AGPSize > (16 * 1024 * 1024))
 			gart_scratch_size = 16 * 1024 * 1024;
@@ -1837,15 +1839,16 @@ NVMapMem(ScrnInfoPtr pScrn)
 			gart_scratch_size = pNv->AGPSize;
 
 		pNv->AGPScratch = NVAllocateMemory(pNv, NOUVEAU_MEM_AGP,
-						   gart_scratch_size);
-		if (!pNv->AGPScratch)
+							gart_scratch_size);
+		if (!pNv->AGPScratch) {
 			xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-				   "Unable to allocate AGP memory\n");
-		else
+				   "Unable to allocate GART memory\n");
+		} else {
 			xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-				   "AGP: mapped %dMiB at %p\n",
-				   (unsigned int) pNv->AGPScratch->
-				   size >> 20, pNv->AGPScratch->map);
+				   "GART: mapped %dMiB at %p\n",
+				   (unsigned int)(pNv->AGPScratch->size >> 20),
+				   pNv->AGPScratch->map);
+		}
 	}
 
 	pNv->Cursor = NVAllocateMemory(pNv, NOUVEAU_MEM_FB, 64 * 1024);

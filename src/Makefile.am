@@ -45,6 +45,7 @@ nouveau_drv_la_SOURCES = \
          nv_dripriv.h \
          nv_local.h \
          nv_mem.c \
+         nv_notifier.c \
          nv_proto.h \
          nvreg.h \
          nv_setup.c \
@@ -55,6 +56,7 @@ nouveau_drv_la_SOURCES = \
 	 nv_output.c \
 	 nv_crtc.c \
 	 nv_i2c.c  \
+         nv30_exa.c \
 	 nv50_cursor.c \
 	 nv50_dac.c \
 	 nv50_display.c \

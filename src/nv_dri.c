@@ -244,13 +244,26 @@ Bool NVDRIGetVersion(ScrnInfoPtr pScrn)
 	}
 	
 	/* temporary lock step versioning */
-#if NOUVEAU_DRM_HEADER_PATCHLEVEL != 6
+#if NOUVEAU_DRM_HEADER_PATCHLEVEL != 7
 #error nouveau_drm.h doesn't match expected patchlevel, update libdrm.
 #endif
 	if (pNv->pKernelDRMVersion->version_patchlevel !=
 			NOUVEAU_DRM_HEADER_PATCHLEVEL) {
 		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			"wrong DRM version\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+Bool NVDRICheckModules(ScrnInfoPtr pScrn)
+{
+	if (!xf86LoaderCheckSymbol("GlxSetVisualConfigs")) {
+		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+			   "[dri] GlxSetVisualConfigs not found.\n");
+		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+			   "      NVIDIA's glx present, or glx not loaded.\n");
 		return FALSE;
 	}
 
@@ -266,6 +279,9 @@ Bool NVDRIScreenInit(ScrnInfoPtr pScrn)
 	pScreen = screenInfo.screens[pScrn->scrnIndex];
 	int drm_page_size;
 	int irq;
+
+	if (!NVDRICheckModules(pScrn))
+		return FALSE;
 
 	drm_page_size = getpagesize();
 	if (!(pDRIInfo = DRICreateInfoRec())) return FALSE;
@@ -377,7 +393,7 @@ Bool NVDRIFinishScreenInit(ScrnInfoPtr pScrn)
 	pNOUVEAUDRI->depth		= pScrn->depth;
 	pNOUVEAUDRI->bpp		= pScrn->bitsPerPixel;
 
-	pNOUVEAUDRI->front_offset 	= pNv->FB->offset - pNv->VRAMPhysical;
+	pNOUVEAUDRI->front_offset 	= pNv->FB->offset;
 	pNOUVEAUDRI->front_pitch	= pScrn->virtualX;
 	/* back/depth buffers will likely be allocated on a per-drawable
 	 * basis, but these may be useful if we want to support shared back
