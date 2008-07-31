@@ -39,8 +39,11 @@
 static Bool
 nv50_xv_check_image_put(PixmapPtr ppix)
 {
-	ScrnInfoPtr pScrn = xf86Screens[ppix->drawable.pScreen->myNum];
-	NVPtr pNv = NVPTR(pScrn);
+	struct nouveau_pixmap *nvpix;
+
+	nvpix = exaGetPixmapDriverPrivate(ppix);
+	if (!nvpix || !nvpix->bo)
+		return FALSE;
 
 	switch (ppix->drawable.depth) {
 	case 32:
@@ -51,7 +54,7 @@ nv50_xv_check_image_put(PixmapPtr ppix)
 		return FALSE;
 	}
 
-	if (exaGetPixmapOffset(ppix) < pNv->EXADriverPtr->offScreenBase)
+	if (!(nvpix->bo->flags & NOUVEAU_BO_TILED))
 		return FALSE;
 
 	return TRUE;

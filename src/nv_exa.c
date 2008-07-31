@@ -362,14 +362,18 @@ NVAccelDownloadM2MF(PixmapPtr pspix, int x, int y, int w, int h,
 	unsigned cpp = pspix->drawable.bitsPerPixel / 8;
 	unsigned line_len = w * cpp;
 	unsigned src_pitch = 0, src_offset = 0, linear = 0;
+	struct nouveau_pixmap *nvpix;
+
+	nvpix = exaGetPixmapDriverPrivate(pspix);
+	if (!nvpix || !nvpix->bo)
+		return FALSE;
 
 	BEGIN_RING(chan, m2mf, 0x184, 2);
 	OUT_PIXMAPo(chan, pspix,
 		    NOUVEAU_BO_GART | NOUVEAU_BO_VRAM | NOUVEAU_BO_RD);
 	OUT_RELOCo(chan, pNv->GART, NOUVEAU_BO_GART | NOUVEAU_BO_WR);
 
-	if (pNv->Architecture < NV_ARCH_50 ||
-	    exaGetPixmapOffset(pspix) < pNv->EXADriverPtr->offScreenBase) {
+	if (!(nvpix->bo->flags & NOUVEAU_BO_TILED)) {
 		linear     = 1;
 		src_pitch  = exaGetPixmapPitch(pspix);
 		src_offset = (y * src_pitch) + (x * cpp);
@@ -604,14 +608,18 @@ NVAccelUploadM2MF(PixmapPtr pdpix, int x, int y, int w, int h,
 	unsigned cpp = pdpix->drawable.bitsPerPixel / 8;
 	unsigned line_len = w * cpp;
 	unsigned dst_pitch = 0, dst_offset = 0, linear = 0;
+	struct nouveau_pixmap *nvpix;
+
+	nvpix = exaGetPixmapDriverPrivate(pdpix);
+	if (!nvpix || !nvpix->bo)
+		return FALSE;
 
 	BEGIN_RING(chan, m2mf, 0x184, 2);
 	OUT_RELOCo(chan, pNv->GART, NOUVEAU_BO_GART | NOUVEAU_BO_RD);
 	OUT_PIXMAPo(chan, pdpix,
 		    NOUVEAU_BO_VRAM | NOUVEAU_BO_GART | NOUVEAU_BO_WR);
 
-	if (pNv->Architecture < NV_ARCH_50 ||
-	    exaGetPixmapOffset(pdpix) < pNv->EXADriverPtr->offScreenBase) {
+	if (!(nvpix->bo->flags & NOUVEAU_BO_TILED)) {
 		linear     = 1;
 		dst_pitch  = exaGetPixmapPitch(pdpix);
 		dst_offset = (y * dst_pitch) + (x * cpp);
@@ -823,7 +831,12 @@ NVExaCreatePixmap(ScreenPtr pScreen, int size, int align)
 		return NULL;
 
 	if (size) {
-		if (nouveau_bo_new(pNv->dev, NOUVEAU_BO_VRAM, 0, size,
+		uint32_t flags = NOUVEAU_BO_VRAM;
+
+		if (pNv->Architecture >= NV_ARCH_50)
+			flags |= NOUVEAU_BO_TILED;
+
+		if (nouveau_bo_new(pNv->dev, flags, 0, size,
 				   &nvpix->bo)) {
 			xfree(nvpix);
 			return NULL;
@@ -912,17 +925,6 @@ NVExaInit(ScreenPtr pScreen)
 	pNv->EXADriverPtr->pixmapPitchAlign = 64; 
 
 	if (pNv->Architecture >= NV_ARCH_50) {
-		struct nouveau_device_priv *nvdev = nouveau_device(pNv->dev);
-		struct nouveau_bo_priv *nvbo = nouveau_bo(pNv->FB);
-		struct drm_nouveau_mem_tile t;
-
-		t.offset = nvbo->drm.offset;
-		t.flags  = nvbo->drm.flags | NOUVEAU_MEM_TILE;
-		t.delta  = pNv->EXADriverPtr->offScreenBase;
-		t.size   = pNv->EXADriverPtr->memorySize - 
-			   pNv->EXADriverPtr->offScreenBase;
-		drmCommandWrite(nvdev->fd, DRM_NOUVEAU_MEM_TILE, &t, sizeof(t));
-
 		pNv->EXADriverPtr->maxX = 8192;
 		pNv->EXADriverPtr->maxY = 8192;
 	} else

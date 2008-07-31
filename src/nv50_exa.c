@@ -98,6 +98,11 @@ NV50EXAAcquireSurface2D(PixmapPtr ppix, int is_src)
 	NV50EXA_LOCALS(ppix);
 	int mthd = is_src ? NV50_2D_SRC_FORMAT : NV50_2D_DST_FORMAT;
 	uint32_t fmt, bo_flags;
+	struct nouveau_pixmap *nvpix;
+
+	nvpix = exaGetPixmapDriverPrivate(ppix);
+	if (!nvpix || !nvpix->bo)
+		return FALSE;
 
 	if (!NV50EXA2DSurfaceFormat(ppix, &fmt))
 		return FALSE;
@@ -105,7 +110,7 @@ NV50EXAAcquireSurface2D(PixmapPtr ppix, int is_src)
 	bo_flags  = NOUVEAU_BO_VRAM;
 	bo_flags |= is_src ? NOUVEAU_BO_RD : NOUVEAU_BO_WR;
 
-	if (exaGetPixmapOffset(ppix) < pNv->EXADriverPtr->offScreenBase) {
+	if (!(nvpix->bo->flags & NOUVEAU_BO_TILED)) {
 		BEGIN_RING(chan, eng2d, mthd, 2);
 		OUT_RING  (chan, fmt);
 		OUT_RING  (chan, 1);
@@ -359,9 +364,14 @@ NV50EXARenderTarget(PixmapPtr ppix, PicturePtr ppict)
 {
 	NV50EXA_LOCALS(ppix);
 	unsigned format;
+	struct nouveau_pixmap *nvpix;
+
+	nvpix = exaGetPixmapDriverPrivate(ppix);
+	if (!nvpix || !nvpix->bo)
+		return FALSE;
 
 	/*XXX: Scanout buffer not tiled, someone needs to figure it out */
-	if (exaGetPixmapOffset(ppix) < pNv->EXADriverPtr->offScreenBase)
+	if (!(nvpix->bo->flags & NOUVEAU_BO_TILED))
 		NOUVEAU_FALLBACK("pixmap is scanout buffer\n");
 
 	switch (ppict->format) {
@@ -424,9 +434,14 @@ static Bool
 NV50EXATexture(PixmapPtr ppix, PicturePtr ppict, unsigned unit)
 {
 	NV50EXA_LOCALS(ppix);
+	struct nouveau_pixmap *nvpix;
+
+	nvpix = exaGetPixmapDriverPrivate(ppix);
+	if (!nvpix || !nvpix->bo)
+		return FALSE;
 
 	/*XXX: Scanout buffer not tiled, someone needs to figure it out */
-	if (exaGetPixmapOffset(ppix) < pNv->EXADriverPtr->offScreenBase)
+	if (!(nvpix->bo->flags & NOUVEAU_BO_TILED))
 		NOUVEAU_FALLBACK("pixmap is scanout buffer\n");
 
 	BEGIN_RING(chan, tesla, NV50TCL_CB_ADDR, 1);
