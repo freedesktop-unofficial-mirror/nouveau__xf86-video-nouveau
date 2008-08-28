@@ -223,6 +223,7 @@ struct nouveau_bo_priv {
 	void *sysmem;
 
 	/* Kernel object */
+	uint32_t global_handle;
 	unsigned handle;
 	void *map;
 
@@ -246,6 +247,10 @@ nouveau_bo_new(struct nouveau_device *, uint32_t flags, int align, int size,
 NOUVEAU_PRIVATE int
 nouveau_bo_user(struct nouveau_device *, void *ptr, int size,
 		struct nouveau_bo **);
+
+NOUVEAU_PRIVATE int
+nouveau_bo_ref_handle(struct nouveau_device *, uint32_t handle,
+		      struct nouveau_bo **);
 
 NOUVEAU_PRIVATE int
 nouveau_bo_ref(struct nouveau_device *, uint64_t handle, struct nouveau_bo **);

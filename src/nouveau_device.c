@@ -26,7 +26,7 @@
 
 #include "nouveau_drmif.h"
 
-#if NOUVEAU_DRM_HEADER_PATCHLEVEL != 107
+#if NOUVEAU_DRM_HEADER_PATCHLEVEL != 108
 #error nouveau_drm.h does not match expected patchlevel, update libdrm.
 #endif
 

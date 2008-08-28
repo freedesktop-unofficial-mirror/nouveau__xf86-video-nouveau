@@ -75,6 +75,25 @@ nouveau_bo_ufree(struct nouveau_bo_priv *nvbo)
 	}
 }
 
+static void
+nouveau_bo_kfree(struct nouveau_bo_priv *nvbo)
+{
+	struct nouveau_device_priv *nvdev = nouveau_device(nvbo->base.device);
+	struct drm_gem_close req;
+
+	if (!nvbo->handle)
+		return;
+
+	if (nvbo->map) {
+		munmap(nvbo->map, nvbo->size);
+		nvbo->map = NULL;
+	}
+
+	req.handle = nvbo->handle;
+	nvbo->handle = 0;
+	ioctl(nvdev->fd, DRM_IOCTL_GEM_CLOSE, &req);
+}
+
 static int
 nouveau_bo_kalloc(struct nouveau_bo_priv *nvbo)
 {
@@ -111,31 +130,24 @@ nouveau_bo_kalloc(struct nouveau_bo_priv *nvbo)
 				  &req, sizeof(req));
 	if (ret)
 		return ret;
-
-
 	nvbo->handle = req.handle;
 	nvbo->size = req.size;
 	nvbo->domain = req.domain;
-	return 0;
-}
 
-static void
-nouveau_bo_kfree(struct nouveau_bo_priv *nvbo)
-{
-	struct nouveau_device_priv *nvdev = nouveau_device(nvbo->base.device);
-	struct drm_gem_close req;
+	if (nvbo->flags & NOUVEAU_BO_SHARED) {
+		struct drm_gem_flink f_req;
 
-	if (!nvbo->handle)
-		return;
+		f_req.handle = req.handle;
+		ret = ioctl(nvdev->fd, DRM_IOCTL_GEM_FLINK, &f_req);
+		if (ret) {
+			nouveau_bo_kfree(nvbo);
+			return ret;
+		}
 
-	if (nvbo->map) {
-		munmap(nvbo->map, nvbo->size);
-		nvbo->map = NULL;
+		nvbo->global_handle = f_req.name;
 	}
 
-	req.handle = nvbo->handle;
-	nvbo->handle = 0;
-	ioctl(nvdev->fd, DRM_IOCTL_GEM_CLOSE, &req);
+	return 0;
 }
 
 static int
@@ -216,6 +228,32 @@ nouveau_bo_user(struct nouveau_device *dev, void *ptr, int size,
 
 	nvbo->sysmem = ptr;
 	nvbo->user = 1;
+	return 0;
+}
+
+int
+nouveau_bo_ref_handle(struct nouveau_device *dev, uint32_t handle,
+		      struct nouveau_bo **bo)
+{
+	struct nouveau_device_priv *nvdev = nouveau_device(dev);
+	struct nouveau_bo_priv *nvbo;
+	struct drm_gem_open req;
+	int ret;
+
+	ret = nouveau_bo_new(dev, 0, 0, 0, bo);
+	if (ret)
+		return ret;
+	nvbo = nouveau_bo(*bo);
+
+	req.name = handle;
+	ret = ioctl(nvdev->fd, DRM_IOCTL_GEM_OPEN, &req);
+	if (ret) {
+		nouveau_bo_del(bo);
+		return ret;
+	}
+
+	nvbo->size = req.size;
+	nvbo->handle = req.handle;
 	return 0;
 }
 

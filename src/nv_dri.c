@@ -320,7 +320,7 @@ Bool NVDRIScreenInit(ScrnInfoPtr pScrn)
 	 * We should detect when the DRM decides to change the FB area
 	 * but we currently don't know how to.
 	 */
-	pDRIInfo->frameBufferSize            = pNv->VRAMPhysicalSize / 2;
+	pDRIInfo->frameBufferSize            = 0x1000;
 	pDRIInfo->frameBufferPhysicalAddress = (void *)pNv->VRAMPhysical;
 	pDRIInfo->frameBufferStride          = pScrn->displayWidth * pScrn->bitsPerPixel/8;
 
@@ -403,16 +403,8 @@ Bool NVDRIFinishScreenInit(ScrnInfoPtr pScrn)
 	pNOUVEAUDRI->depth		= pScrn->depth;
 	pNOUVEAUDRI->bpp		= pScrn->bitsPerPixel;
 
-	pNOUVEAUDRI->front_offset 	= pNv->FB->offset;
+	pNOUVEAUDRI->front_handle	= nouveau_bo(pNv->FB)->global_handle;
 	pNOUVEAUDRI->front_pitch	= pScrn->displayWidth;
-	/* back/depth buffers will likely be allocated on a per-drawable
-	 * basis, but these may be useful if we want to support shared back
-	 * buffers at some point.
-	 */
-	pNOUVEAUDRI->back_offset	= 0;
-	pNOUVEAUDRI->back_pitch		= 0;
-	pNOUVEAUDRI->depth_offset	= 0;
-	pNOUVEAUDRI->depth_pitch	= 0;
 
 	return TRUE;
 }
