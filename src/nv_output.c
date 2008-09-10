@@ -44,28 +44,9 @@
 #include "xf86Crtc.h"
 #include "nv_include.h"
 
-const char *OutputType[] = {
-    "None",
-    "VGA",
-    "DVI",
-    "LVDS",
-    "S-video",
-    "Composite",
-};
-
-const char *MonTypeName[7] = {
-    "AUTO",
-    "NONE",
-    "CRT",
-    "LVDS",
-    "TMDS",
-    "CTV",
-    "STV"
-};
-
 static int nv_output_ramdac_offset(xf86OutputPtr output)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	int offset = 0;
 
 	if (nv_output->dcb->or & (8 | OUTPUT_C))
@@ -78,22 +59,22 @@ static int nv_output_ramdac_offset(xf86OutputPtr output)
 
 static void dpms_update_fp_control(xf86OutputPtr output, int mode)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	NVPtr pNv = NVPTR(output->scrn);
-	NVCrtcPrivatePtr nv_crtc;
+	struct nouveau_crtc *nv_crtc;
 	NVCrtcRegPtr regp;
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(output->scrn);
 	int i;
 
 	if (mode == DPMSModeOn) {
-		nv_crtc = output->crtc->driver_private;
+		nv_crtc = to_nouveau_crtc(output->crtc);
 		regp = &pNv->ModeReg.crtc_reg[nv_crtc->head];
 
 		nv_crtc->fp_users |= 1 << nv_output->dcb->index;
 		NVWriteRAMDAC(pNv, nv_crtc->head, NV_RAMDAC_FP_CONTROL, regp->fp_control & ~0x20000022);
 	} else
 		for (i = 0; i <= pNv->twoHeads; i++) {
-			nv_crtc = xf86_config->crtc[i]->driver_private;
+			nv_crtc = to_nouveau_crtc(xf86_config->crtc[i]);
 			regp = &pNv->ModeReg.crtc_reg[nv_crtc->head];
 
 			nv_crtc->fp_users &= ~(1 << nv_output->dcb->index);
@@ -110,7 +91,7 @@ static void nv_digital_output_prepare_sel_clk(xf86OutputPtr output);
 static void
 nv_lvds_output_dpms(xf86OutputPtr output, int mode)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(pScrn);
 
@@ -127,7 +108,7 @@ nv_lvds_output_dpms(xf86OutputPtr output, int mode)
 		int pclk = nv_output->native_mode->Clock;
 
 		if (crtc)
-			head = ((NVCrtcPrivatePtr)crtc->driver_private)->head;
+			head = to_nouveau_crtc(crtc)->head;
 
 		if (mode == DPMSModeOn)
 			call_lvds_script(pScrn, nv_output->dcb, head, LVDS_PANEL_ON, pclk);
@@ -149,7 +130,7 @@ nv_lvds_output_dpms(xf86OutputPtr output, int mode)
 static void
 nv_analog_output_dpms(xf86OutputPtr output, int mode)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(output->scrn);
 
@@ -174,7 +155,7 @@ nv_analog_output_dpms(xf86OutputPtr output, int mode)
 static void
 nv_tmds_output_dpms(xf86OutputPtr output, int mode)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(output->scrn);
 
@@ -187,11 +168,11 @@ nv_tmds_output_dpms(xf86OutputPtr output, int mode)
 	dpms_update_fp_control(output, mode);
 
 	if (nv_output->dcb->location != LOC_ON_CHIP) {
-		NVCrtcPrivatePtr nv_crtc;
+		struct nouveau_crtc *nv_crtc;
 		int i;
 
 		if (mode == DPMSModeOn) {
-			nv_crtc = output->crtc->driver_private;
+			nv_crtc = to_nouveau_crtc(output->crtc);
 			NVWriteVgaCrtc(pNv, nv_crtc->head, NV_VGA_CRTCX_LCD,
 				       pNv->ModeReg.crtc_reg[nv_crtc->head].CRTC[NV_VGA_CRTCX_LCD]);
 		} else
@@ -205,7 +186,7 @@ static void nv_output_save(xf86OutputPtr output)
 {
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_save is called.\n");
 
@@ -235,7 +216,7 @@ static void nv_output_restore(xf86OutputPtr output)
 {
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	int head = nv_output->restore.head;
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_restore is called.\n");
@@ -258,7 +239,7 @@ static void nv_output_restore(xf86OutputPtr output)
 
 static int nv_output_mode_valid(xf86OutputPtr output, DisplayModePtr mode)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	NVPtr pNv = NVPTR(output->scrn);
 
 	if (!output->doubleScanAllowed && mode->Flags & V_DBLSCAN)
@@ -294,7 +275,7 @@ static Bool
 nv_output_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
 		     DisplayModePtr adjusted_mode)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_mode_fixup is called.\n");
@@ -324,10 +305,10 @@ nv_output_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
 static void
 nv_output_mode_set(xf86OutputPtr output, DisplayModePtr mode, DisplayModePtr adjusted_mode)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = output->crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(output->crtc);
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_mode_set is called.\n");
 
@@ -348,50 +329,11 @@ nv_output_mode_set(xf86OutputPtr output, DisplayModePtr mode, DisplayModePtr adj
 		NVWriteRAMDAC(pNv, 0, NV_RAMDAC_TEST_CONTROL + nv_output_ramdac_offset(output), 0x00100000);
 }
 
-static xf86MonPtr
-nv_get_edid(xf86OutputPtr output)
-{
-	NVOutputPrivatePtr nv_output = output->driver_private;
-	xf86MonPtr ddc_mon;
-
-	if (nv_output->pDDCBus == NULL)
-		return NULL;
-
-	ddc_mon = xf86OutputGetEDID(output, nv_output->pDDCBus);
-	if (!ddc_mon)
-		return NULL;
-
-	if (ddc_mon->features.input_type && nv_output->dcb->type == OUTPUT_ANALOG)
-		goto invalid;
-
-	if (!ddc_mon->features.input_type && (nv_output->dcb->type == OUTPUT_TMDS ||
-					      nv_output->dcb->type == OUTPUT_LVDS))
-		goto invalid;
-
-	return ddc_mon;
-
-invalid:
-	xfree(ddc_mon);
-	return NULL;
-}
-
-static Bool
-nv_ddc_detect(xf86OutputPtr output)
-{
-	xf86MonPtr m = nv_get_edid(output);
-
-	if (m == NULL)
-		return FALSE;
-
-	xfree(m);
-	return TRUE;
-}
-
 static Bool
 nv_load_detect(xf86OutputPtr output)
 {
 	ScrnInfoPtr pScrn = output->scrn;
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	NVPtr pNv = NVPTR(pScrn);
 	uint32_t testval, regoffset = nv_output_ramdac_offset(output);
 	uint32_t saved_powerctrl_2 = 0, saved_powerctrl_4 = 0, saved_routput, saved_rtest_ctrl, temp;
@@ -457,95 +399,114 @@ nv_load_detect(xf86OutputPtr output)
 }
 
 static xf86OutputStatus
-nv_tmds_output_detect(xf86OutputPtr output)
+nv_output_detect(xf86OutputPtr output)
 {
-	ScrnInfoPtr pScrn = output->scrn;
-
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_tmds_output_detect is called.\n");
-
-	if (nv_ddc_detect(output))
-		return XF86OutputStatusConnected;
-
-	return XF86OutputStatusDisconnected;
-}
-
-
-static xf86OutputStatus
-nv_analog_output_detect(xf86OutputPtr output)
-{
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(pScrn);
 
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_analog_output_detect is called.\n");
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_detect is called.\n");
 
-	if (nv_ddc_detect(output))
-		return XF86OutputStatusConnected;
+	if (nv_output->pDDCBus) {
+		if ((nv_output->mon = xf86OutputGetEDID(output, nv_output->pDDCBus)) &&
+		    ((nv_output->mon->features.input_type && nv_output->dcb->type == OUTPUT_ANALOG) ||
+		     (!nv_output->mon->features.input_type && nv_output->dcb->type == OUTPUT_TMDS))) {
+			xfree(nv_output->mon);
+			nv_output->mon = NULL;
+		}
+		xf86OutputSetEDID(output, nv_output->mon);
+		if (nv_output->mon)
+			return XF86OutputStatusConnected;
+	}
 
-	/* we don't have a load det function for early cards */
-	if (!pNv->twoHeads || pNv->NVArch == 0x11)
-		return XF86OutputStatusUnknown;
-	else if (pNv->twoHeads && nv_load_detect(output))
-		return XF86OutputStatusConnected;
+	if (nv_output->dcb->type == OUTPUT_ANALOG) {
+		/* we don't have a load det function for early cards */
+		if (!pNv->twoHeads || pNv->NVArch == 0x11)
+			return XF86OutputStatusUnknown;
+		else if (pNv->twoHeads && nv_load_detect(output))
+			return XF86OutputStatusConnected;
+	} else if (nv_output->dcb->type == OUTPUT_LVDS) {
+		if (nv_output->dcb->lvdsconf.use_straps_for_mode &&
+		    pNv->VBIOS.fp.native_mode)
+			return XF86OutputStatusConnected;
+		if (pNv->VBIOS.fp.edid) {
+			xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+				   "Will use hardcoded BIOS FP EDID\n");
+			nv_output->mon = xf86InterpretEDID(pScrn->scrnIndex,
+							   pNv->VBIOS.fp.edid);
+			xf86OutputSetEDID(output, nv_output->mon);
+			return XF86OutputStatusConnected;
+		}
+	}
 
 	return XF86OutputStatusDisconnected;
 }
 
 static DisplayModePtr
-nv_output_get_modes(xf86OutputPtr output, xf86MonPtr mon)
+get_native_mode_from_edid(xf86OutputPtr output, DisplayModePtr edid_modes)
 {
 	ScrnInfoPtr pScrn = output->scrn;
-	NVOutputPrivatePtr nv_output = output->driver_private;
-	DisplayModePtr ddc_modes;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
+	int max_h_active = 0, max_v_active = 0;
+	int i;
+	DisplayModePtr mode;
 
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_get_modes is called.\n");
+	for (i = 0; i < DET_TIMINGS; i++) {
+		/* We only look at detailed timings atm */
+		if (nv_output->mon->det_mon[i].type != DT)
+			continue;
+		/* Selecting only based on width ok? */
+		if (nv_output->mon->det_mon[i].section.d_timings.h_active > max_h_active) {
+			max_h_active = nv_output->mon->det_mon[i].section.d_timings.h_active;
+			max_v_active = nv_output->mon->det_mon[i].section.d_timings.v_active;
+		}
+	}
+	if (!(max_h_active && max_v_active)) {
+		xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No EDID detailed timings available, bailing out.\n");
+		return NULL;
+	}
 
-	xf86OutputSetEDID(output, mon);
+	if (nv_output->native_mode) {
+		xfree(nv_output->native_mode);
+		nv_output->native_mode = NULL;
+	}
 
-	ddc_modes = xf86OutputGetEDIDModes(output);
-
-	if (nv_output->dcb->type == OUTPUT_TMDS || nv_output->dcb->type == OUTPUT_LVDS) {
-		int max_h_active = 0, max_v_active = 0;
-		int i;
-		DisplayModePtr mode;
-
-		for (i = 0; i < DET_TIMINGS; i++) {
-			/* We only look at detailed timings atm */
-			if (mon->det_mon[i].type != DT)
-				continue;
-			/* Selecting only based on width ok? */
-			if (mon->det_mon[i].section.d_timings.h_active > max_h_active) {
-				max_h_active = mon->det_mon[i].section.d_timings.h_active;
-				max_v_active = mon->det_mon[i].section.d_timings.v_active;
+	for (mode = edid_modes; mode != NULL; mode = mode->next) {
+		if (mode->HDisplay == max_h_active &&
+			mode->VDisplay == max_v_active) {
+			/* Take the preferred mode when it exists. */
+			if (mode->type & M_T_PREFERRED) {
+				nv_output->native_mode = xf86DuplicateMode(mode);
+				break;
 			}
-		}
-		if (!(max_h_active && max_v_active)) {
-			xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "No EDID detailed timings available, bailing out.\n");
-			return NULL;
-		}
-
-		if (nv_output->native_mode) {
-			xfree(nv_output->native_mode);
-			nv_output->native_mode = NULL;
-		}
-
-		for (mode = ddc_modes; mode != NULL; mode = mode->next) {
-			if (mode->HDisplay == max_h_active &&
-				mode->VDisplay == max_v_active) {
-				/* Take the preferred mode when it exists. */
-				if (mode->type & M_T_PREFERRED) {
-					nv_output->native_mode = xf86DuplicateMode(mode);
-					break;
-				}
-				/* Find the highest refresh mode otherwise. */
-				if (!nv_output->native_mode || (mode->VRefresh > nv_output->native_mode->VRefresh)) {
-					if (nv_output->native_mode)
-						xfree(nv_output->native_mode);
-					mode->type |= M_T_PREFERRED;
-					nv_output->native_mode = xf86DuplicateMode(mode);
-				}
+			/* Find the highest refresh mode otherwise. */
+			if (!nv_output->native_mode || (mode->VRefresh > nv_output->native_mode->VRefresh)) {
+				if (nv_output->native_mode)
+					xfree(nv_output->native_mode);
+				mode->type |= M_T_PREFERRED;
+				nv_output->native_mode = xf86DuplicateMode(mode);
 			}
 		}
 	}
+
+	return nv_output->native_mode;
+}
+
+static DisplayModePtr
+nv_output_get_edid_modes(xf86OutputPtr output)
+{
+	ScrnInfoPtr pScrn = output->scrn;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
+	DisplayModePtr edid_modes;
+
+	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_get_edid_modes is called.\n");
+
+	if (!(edid_modes = xf86OutputGetEDIDModes(output)))
+		return NULL;
+
+	if (nv_output->dcb->type == OUTPUT_TMDS || nv_output->dcb->type == OUTPUT_LVDS)
+		if (!get_native_mode_from_edid(output, edid_modes))
+			return NULL;
 
 	if (nv_output->dcb->type == OUTPUT_LVDS) {
 		static bool dual_link_correction_done = false;
@@ -556,46 +517,33 @@ nv_output_get_modes(xf86OutputPtr output, xf86MonPtr mon)
 		}
 	}
 
-	return ddc_modes;
-}
-
-static DisplayModePtr
-nv_output_get_ddc_modes(xf86OutputPtr output)
-{
-	xf86MonPtr ddc_mon;
-	ScrnInfoPtr pScrn = output->scrn;
-
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_get_ddc_modes is called.\n");
-
-	ddc_mon = nv_get_edid(output);
-
-	if (ddc_mon == NULL)
-		return NULL;
-
-	return nv_output_get_modes(output, ddc_mon);
+	return edid_modes;
 }
 
 static void
 nv_output_destroy (xf86OutputPtr output)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_destroy is called.\n");
 
-	if (nv_output) {
-		if (nv_output->native_mode)
-			xfree(nv_output->native_mode);
-		xfree(output->driver_private);
-	}
+	if (!nv_output)
+		return;
+
+	if (nv_output->mon)
+		xfree(nv_output->mon);
+	if (nv_output->native_mode)
+		xfree(nv_output->native_mode);
+	xfree(nv_output);
 }
 
 static void nv_digital_output_prepare_sel_clk(xf86OutputPtr output)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	NVPtr pNv = NVPTR(output->scrn);
 	NVRegPtr state = &pNv->ModeReg;
-	NVCrtcPrivatePtr nv_crtc = output->crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(output->crtc);
 	uint32_t bits1618 = nv_output->dcb->or & OUTPUT_A ? 0x10000 : 0x40000;
 
 	if (nv_output->dcb->location != LOC_ON_CHIP)
@@ -636,10 +584,10 @@ static void nv_digital_output_prepare_sel_clk(xf86OutputPtr output)
 static void
 nv_output_prepare(xf86OutputPtr output)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(output->scrn);
-	NVCrtcPrivatePtr nv_crtc = output->crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(output->crtc);
 	NVCrtcRegPtr regp = &pNv->ModeReg.crtc_reg[nv_crtc->head];
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_prepare is called.\n");
@@ -671,8 +619,8 @@ nv_output_commit(xf86OutputPtr output)
 {
 	ScrnInfoPtr pScrn = output->scrn;
 	xf86CrtcPtr crtc = output->crtc;
-	NVOutputPrivatePtr nv_output = output->driver_private;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_output_commit is called.\n");
 
@@ -688,8 +636,8 @@ static const xf86OutputFuncsRec nv_analog_output_funcs = {
     .mode_valid = nv_output_mode_valid,
     .mode_fixup = nv_output_mode_fixup,
     .mode_set = nv_output_mode_set,
-    .detect = nv_analog_output_detect,
-    .get_modes = nv_output_get_ddc_modes,
+    .detect = nv_output_detect,
+    .get_modes = nv_output_get_edid_modes,
     .destroy = nv_output_destroy,
     .prepare = nv_output_prepare,
     .commit = nv_output_commit,
@@ -717,7 +665,7 @@ static Atom dithering_atom;
 static void
 nv_digital_output_create_resources(xf86OutputPtr output)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	ScrnInfoPtr pScrn = output->scrn;
 	INT32 dithering_range[2] = { 0, 1 };
 	int error, i;
@@ -781,7 +729,7 @@ static Bool
 nv_digital_output_set_property(xf86OutputPtr output, Atom property,
 				RRPropertyValuePtr value)
 {
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 
 	if (property == scaling_mode_atom) {
 		int32_t ret;
@@ -824,8 +772,8 @@ static const xf86OutputFuncsRec nv_tmds_output_funcs = {
 	.mode_valid = nv_output_mode_valid,
 	.mode_fixup = nv_output_mode_fixup,
 	.mode_set = nv_output_mode_set,
-	.detect = nv_tmds_output_detect,
-	.get_modes = nv_output_get_ddc_modes,
+	.detect = nv_output_detect,
+	.get_modes = nv_output_get_edid_modes,
 	.destroy = nv_output_destroy,
 	.prepare = nv_output_prepare,
 	.commit = nv_output_commit,
@@ -833,48 +781,21 @@ static const xf86OutputFuncsRec nv_tmds_output_funcs = {
 	.set_property = nv_digital_output_set_property,
 };
 
-static xf86OutputStatus
-nv_lvds_output_detect(xf86OutputPtr output)
-{
-	ScrnInfoPtr pScrn = output->scrn;
-	NVPtr pNv = NVPTR(pScrn);
-	NVOutputPrivatePtr nv_output = output->driver_private;
-
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_lvds_output_detect is called.\n");
-
-	if (nv_ddc_detect(output))
-		return XF86OutputStatusConnected;
-	if (nv_output->dcb->lvdsconf.use_straps_for_mode && pNv->VBIOS.fp.native_mode)
-		return XF86OutputStatusConnected;
-	if (pNv->VBIOS.fp.edid)
-		return XF86OutputStatusConnected;
-
-	return XF86OutputStatusDisconnected;
-}
-
 static DisplayModePtr
 nv_lvds_output_get_modes(xf86OutputPtr output)
 {
 	ScrnInfoPtr pScrn = output->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVOutputPrivatePtr nv_output = output->driver_private;
+	struct nouveau_output *nv_output = to_nouveau_output(output);
 	DisplayModePtr modes;
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_lvds_output_get_modes is called.\n");
 
-	if ((modes = nv_output_get_ddc_modes(output)))
+	if ((modes = nv_output_get_edid_modes(output)))
 		return modes;
 
-	if (!nv_output->dcb->lvdsconf.use_straps_for_mode || pNv->VBIOS.fp.native_mode == NULL) {
-		xf86MonPtr edid_mon;
-
-		if (!pNv->VBIOS.fp.edid)
-			return NULL;
-
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Using hardcoded BIOS FP EDID\n");
-		edid_mon = xf86InterpretEDID(pScrn->scrnIndex, pNv->VBIOS.fp.edid);
-		return nv_output_get_modes(output, edid_mon);
-	}
+	if (!nv_output->dcb->lvdsconf.use_straps_for_mode || pNv->VBIOS.fp.native_mode == NULL)
+		return NULL;
 
 	if (nv_output->native_mode)
 		xfree(nv_output->native_mode);
@@ -890,7 +811,7 @@ static const xf86OutputFuncsRec nv_lvds_output_funcs = {
 	.mode_valid = nv_output_mode_valid,
 	.mode_fixup = nv_output_mode_fixup,
 	.mode_set = nv_output_mode_set,
-	.detect = nv_lvds_output_detect,
+	.detect = nv_output_detect,
 	.get_modes = nv_lvds_output_get_modes,
 	.destroy = nv_output_destroy,
 	.prepare = nv_output_prepare,
@@ -904,11 +825,11 @@ nv_add_output(ScrnInfoPtr pScrn, struct dcb_entry *dcbent, const xf86OutputFuncs
 {
 	NVPtr pNv = NVPTR(pScrn);
 	xf86OutputPtr output;
-	NVOutputPrivatePtr nv_output;
+	struct nouveau_output *nv_output;
 
 	if (!(output = xf86OutputCreate(pScrn, output_funcs, outputname)))
 		return;
-	if (!(nv_output = xnfcalloc(sizeof(NVOutputPrivateRec), 1)))
+	if (!(nv_output = xnfcalloc(sizeof (struct nouveau_output), 1)))
 		return;
 
 	output->driver_private = nv_output;

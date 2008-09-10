@@ -477,9 +477,9 @@ static Bool NVPciProbe (	DriverPtr 		drv,
 
 	pci_device_unmap_range(dev, (void *) regs, 0x90000);
 
-	/* Currently NV04 up to NV98 is known. */
-	/* Using 0x9F as upper bound for some margin. */
-	if (architecture >= 0x04 && architecture <= 0x9F) {
+	/* Currently NV04 up to NVAA is known. */
+	/* Using 0xAF as upper bound for some margin. */
+	if (architecture >= 0x04 && architecture <= 0xAF) {
 
 		/* At this stage the pci_id should be ok, so we generate this
 		 * to avoid list duplication */
@@ -992,7 +992,6 @@ static const xf86CrtcConfigFuncsRec nv_xf86crtc_config_funcs = {
 Bool
 NVPreInit(ScrnInfoPtr pScrn, int flags)
 {
-	xf86CrtcConfigPtr xf86_config;
 	NVPtr pNv;
 	MessageType from;
 	int i, max_width, max_height;
@@ -1359,8 +1358,6 @@ NVPreInit(ScrnInfoPtr pScrn, int flags)
 	if (pNv->randr12_enable) {
 		/* Allocate an xf86CrtcConfig */
 		xf86CrtcConfigInit(pScrn, &nv_xf86crtc_config_funcs);
-		xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
-
 		xf86CrtcSetSizeRange(pScrn, 320, 200, max_width, max_height);
 	}
 
@@ -2213,7 +2210,7 @@ NVSaveScreen(ScreenPtr pScreen, int mode)
 	    for (i = 0; i < xf86_config->num_crtc; i++) {
 		
 		if (xf86_config->crtc[i]->enabled) {
-		    NVCrtcPrivatePtr nv_crtc = xf86_config->crtc[i]->driver_private;
+		    struct nouveau_crtc *nv_crtc = to_nouveau_crtc(xf86_config->crtc[i]);
 		    NVBlankScreen(pScrn, nv_crtc->head, !on);
 		}
 	    }

@@ -156,6 +156,7 @@ typedef struct _nv_crtc_reg
 
 	/* These are former output regs, but are believed to be crtc related */
 	uint32_t general;
+	uint32_t unk_630;
 	uint32_t debug_0;
 	uint32_t debug_1;
 	uint32_t debug_2;
@@ -220,12 +221,12 @@ typedef struct _riva_hw_state
 	NVCrtcRegRec crtc_reg[2];
 } RIVA_HW_STATE, *NVRegPtr;
 
-typedef struct _NVCrtcPrivateRec {
+struct nouveau_crtc {
 	int head;
 	uint8_t last_dpms;
 	struct nouveau_bo *shadow;
 	int fp_users;
-} NVCrtcPrivateRec, *NVCrtcPrivatePtr;
+};
 
 typedef enum {
 	OUTPUT_A = (1 << 0),
@@ -233,7 +234,8 @@ typedef enum {
 	OUTPUT_C = (1 << 2)
 } ValidOutputResource;
 
-typedef struct _NVOutputPrivateRec {
+struct nouveau_output {
+	xf86MonPtr mon;
 	uint8_t last_dpms;
 	I2CBusPtr pDDCBus;
 	struct dcb_entry *dcb;
@@ -241,7 +243,10 @@ typedef struct _NVOutputPrivateRec {
 	uint8_t scaling_mode;
 	bool dithering;
 	NVOutputRegRec restore;
-} NVOutputPrivateRec, *NVOutputPrivatePtr;
+};
+
+#define to_nouveau_crtc(x) ((struct nouveau_crtc *)(x)->driver_private)
+#define to_nouveau_output(x) ((struct nouveau_output *)(x)->driver_private)
 
 /* changing these requires matching changes to reg tables in nv_get_clock */
 #define MAX_PLL_TYPES	4

@@ -55,7 +55,7 @@ static void nv_crtc_save_state_palette(xf86CrtcPtr crtc, RIVA_HW_STATE *state);
 static uint32_t NVCrtcReadCRTC(xf86CrtcPtr crtc, uint32_t reg)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(pScrn);
 
 	return NVReadCRTC(pNv, nv_crtc->head, reg);
@@ -64,7 +64,7 @@ static uint32_t NVCrtcReadCRTC(xf86CrtcPtr crtc, uint32_t reg)
 static void NVCrtcWriteCRTC(xf86CrtcPtr crtc, uint32_t reg, uint32_t val)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(pScrn);
 
 	NVWriteCRTC(pNv, nv_crtc->head, reg, val);
@@ -73,7 +73,7 @@ static void NVCrtcWriteCRTC(xf86CrtcPtr crtc, uint32_t reg, uint32_t val)
 static uint32_t NVCrtcReadRAMDAC(xf86CrtcPtr crtc, uint32_t reg)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(pScrn);
 
 	return NVReadRAMDAC(pNv, nv_crtc->head, reg);
@@ -82,7 +82,7 @@ static uint32_t NVCrtcReadRAMDAC(xf86CrtcPtr crtc, uint32_t reg)
 static void NVCrtcWriteRAMDAC(xf86CrtcPtr crtc, uint32_t reg, uint32_t val)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(pScrn);
 
 	NVWriteRAMDAC(pNv, nv_crtc->head, reg, val);
@@ -90,7 +90,7 @@ static void NVCrtcWriteRAMDAC(xf86CrtcPtr crtc, uint32_t reg, uint32_t val)
 
 void NVCrtcLockUnlock(xf86CrtcPtr crtc, Bool lock)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
 
@@ -129,7 +129,7 @@ void NVCrtcLockUnlock(xf86CrtcPtr crtc, Bool lock)
 
 static void nv_crtc_save_state_pll(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp = &state->crtc_reg[nv_crtc->head];
 	NVPtr pNv = NVPTR(crtc->scrn);
 
@@ -151,7 +151,7 @@ static void nv_crtc_save_state_pll(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 
 static void nv_crtc_load_state_pll(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp = &state->crtc_reg[nv_crtc->head];
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
@@ -206,7 +206,7 @@ static void nv_crtc_calc_state_ext(xf86CrtcPtr crtc, DisplayModePtr mode, int do
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	RIVA_HW_STATE *state = &pNv->ModeReg;
 	NVCrtcRegPtr regp = &state->crtc_reg[nv_crtc->head];
 	struct pll_lims pll_lim;
@@ -330,7 +330,7 @@ static void nv_crtc_calc_state_ext(xf86CrtcPtr crtc, DisplayModePtr mode, int do
 static void
 nv_crtc_dpms(xf86CrtcPtr crtc, int mode)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
 	unsigned char seq1 = 0, crtc17 = 0;
@@ -398,7 +398,7 @@ nv_crtc_mode_set_vga(xf86CrtcPtr crtc, DisplayModePtr mode, DisplayModePtr adjus
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp = &pNv->ModeReg.crtc_reg[nv_crtc->head];
 
 	/* Calculate our timings */
@@ -421,7 +421,7 @@ nv_crtc_mode_set_vga(xf86CrtcPtr crtc, DisplayModePtr mode, DisplayModePtr adjus
 
 	for (i = 0; i < xf86_config->num_output; i++) {
 		xf86OutputPtr output = xf86_config->output[i];
-		NVOutputPrivatePtr nv_output = output->driver_private;
+		struct nouveau_output *nv_output = to_nouveau_output(output);
 
 		if (output->crtc == crtc && (nv_output->dcb->type == OUTPUT_LVDS ||
 					     nv_output->dcb->type == OUTPUT_TMDS))
@@ -624,7 +624,7 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp = &pNv->ModeReg.crtc_reg[nv_crtc->head];
 	NVCrtcRegPtr savep = &pNv->SavedReg.crtc_reg[nv_crtc->head];
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
@@ -633,7 +633,7 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
 
 	for (i = 0; i < xf86_config->num_output; i++) {
 		xf86OutputPtr output = xf86_config->output[i];
-		NVOutputPrivatePtr nv_output = output->driver_private;
+		struct nouveau_output *nv_output = to_nouveau_output(output);
 
 		if (output->crtc == crtc && nv_output->dcb->type == OUTPUT_LVDS)
 			lvds_output = true;
@@ -768,6 +768,8 @@ nv_crtc_mode_set_regs(xf86CrtcPtr crtc, DisplayModePtr mode)
 		/* PIPE_LONG mode, something to do with the size of the cursor? */
 		regp->general |= 1 << 29;
 
+	regp->unk_630 = 0; /* turn off green mode (tv test pattern?) */
+
 	/* Some values the blob sets */
 	regp->unk_a20 = 0x0;
 	regp->unk_a24 = 0xfffff;
@@ -780,10 +782,10 @@ nv_crtc_mode_set_fp_regs(xf86CrtcPtr crtc, DisplayModePtr mode, DisplayModePtr a
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp = &pNv->ModeReg.crtc_reg[nv_crtc->head];
 	NVCrtcRegPtr savep = &pNv->SavedReg.crtc_reg[nv_crtc->head];
-	NVOutputPrivatePtr nv_output = NULL;
+	struct nouveau_output *nv_output = NULL;
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
 	bool is_fp = false;
 	bool is_lvds = false;
@@ -793,7 +795,7 @@ nv_crtc_mode_set_fp_regs(xf86CrtcPtr crtc, DisplayModePtr mode, DisplayModePtr a
 	for (i = 0; i < xf86_config->num_output; i++) {
 		xf86OutputPtr output = xf86_config->output[i];
 		/* assuming one fp output per crtc seems ok */
-		nv_output = output->driver_private;
+		nv_output = to_nouveau_output(output);
 
 		if (output->crtc == crtc && nv_output->dcb->type == OUTPUT_LVDS)
 			is_lvds = true;
@@ -950,7 +952,7 @@ nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 		 int x, int y)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(pScrn);
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_crtc_mode_set is called for CRTC %d.\n", nv_crtc->head);
@@ -997,7 +999,7 @@ nv_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 static void nv_crtc_save(xf86CrtcPtr crtc)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(pScrn);
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_crtc_save is called for CRTC %d.\n", nv_crtc->head);
@@ -1020,7 +1022,7 @@ static void nv_crtc_save(xf86CrtcPtr crtc)
 static void nv_crtc_restore(xf86CrtcPtr crtc)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(pScrn);
 	RIVA_HW_STATE *state;
 	NVCrtcRegPtr savep;
@@ -1048,7 +1050,7 @@ static void nv_crtc_prepare(xf86CrtcPtr crtc)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_crtc_prepare is called for CRTC %d.\n", nv_crtc->head);
 
@@ -1075,7 +1077,7 @@ static void nv_crtc_prepare(xf86CrtcPtr crtc)
 
 static void nv_crtc_commit(xf86CrtcPtr crtc)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	ScrnInfoPtr pScrn = crtc->scrn;
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_crtc_commit for CRTC %d.\n", nv_crtc->head);
 
@@ -1110,7 +1112,7 @@ static void
 nv_crtc_gamma_set(xf86CrtcPtr crtc, CARD16 *red, CARD16 *green, CARD16 *blue,
 					int size)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
 	NVCrtcRegPtr regp = &pNv->ModeReg.crtc_reg[nv_crtc->head];
@@ -1165,7 +1167,7 @@ nv_crtc_gamma_set(xf86CrtcPtr crtc, CARD16 *red, CARD16 *green, CARD16 *blue,
 static void *
 nv_crtc_shadow_allocate (xf86CrtcPtr crtc, int width, int height)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
 	void *offset;
@@ -1203,7 +1205,7 @@ nv_crtc_shadow_create(xf86CrtcPtr crtc, void *data, int width, int height)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	ScreenPtr pScreen = pScrn->pScreen;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	unsigned long rotate_pitch;
 	PixmapPtr rotate_pixmap;
 	struct nouveau_pixmap *nvpix;
@@ -1259,7 +1261,7 @@ static void
 nv_crtc_shadow_destroy(xf86CrtcPtr crtc, PixmapPtr rotate_pixmap, void *data)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	ScreenPtr pScreen = pScrn->pScreen;
 
 	xf86DrvMsg(pScrn->scrnIndex, X_INFO, "nv_crtc_shadow_destroy is called.\n");
@@ -1299,7 +1301,7 @@ nv_crtc_init(ScrnInfoPtr pScrn, int crtc_num)
 	NVPtr pNv = NVPTR(pScrn);
 	static xf86CrtcFuncsRec crtcfuncs;
 	xf86CrtcPtr crtc;
-	NVCrtcPrivatePtr nv_crtc;
+	struct nouveau_crtc *nv_crtc;
 	NVCrtcRegPtr regp = &pNv->ModeReg.crtc_reg[crtc_num];
 	int i;
 
@@ -1321,7 +1323,7 @@ nv_crtc_init(ScrnInfoPtr pScrn, int crtc_num)
 	if (crtc == NULL)
 		return;
 
-	nv_crtc = xnfcalloc (sizeof (NVCrtcPrivateRec), 1);
+	nv_crtc = xnfcalloc (sizeof (struct nouveau_crtc), 1);
 	nv_crtc->head = crtc_num;
 	nv_crtc->last_dpms = NV_DPMS_CLEARED;
 
@@ -1341,7 +1343,7 @@ static void nv_crtc_load_state_vga(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	int i;
 	NVCrtcRegPtr regp = &state->crtc_reg[nv_crtc->head];
 
@@ -1370,7 +1372,7 @@ static void nv_crtc_load_state_ext(xf86CrtcPtr crtc, RIVA_HW_STATE *state, Bool 
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);    
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp;
 	int i;
 
@@ -1468,7 +1470,7 @@ static void nv_crtc_save_state_vga(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	int i;
 	NVCrtcRegPtr regp = &state->crtc_reg[nv_crtc->head];
 
@@ -1493,7 +1495,7 @@ static void nv_crtc_save_state_ext(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp;
 	int i;
 
@@ -1563,7 +1565,7 @@ static void nv_crtc_save_state_ramdac(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);    
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp;
 	int i;
 
@@ -1572,6 +1574,8 @@ static void nv_crtc_save_state_ramdac(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 	regp->general = NVCrtcReadRAMDAC(crtc, NV_RAMDAC_GENERAL_CONTROL);
 
 	if (pNv->twoHeads) {
+		if (pNv->NVArch >= 0x17)
+			regp->unk_630 = NVCrtcReadRAMDAC(crtc, NV_RAMDAC_630);
 		regp->fp_control	= NVCrtcReadRAMDAC(crtc, NV_RAMDAC_FP_CONTROL);
 		regp->debug_0	= NVCrtcReadRAMDAC(crtc, NV_RAMDAC_FP_DEBUG_0);
 		regp->debug_1	= NVCrtcReadRAMDAC(crtc, NV_RAMDAC_FP_DEBUG_1);
@@ -1611,7 +1615,7 @@ static void nv_crtc_load_state_ramdac(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);    
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVCrtcRegPtr regp;
 	int i;
 
@@ -1620,6 +1624,8 @@ static void nv_crtc_load_state_ramdac(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 	NVCrtcWriteRAMDAC(crtc, NV_RAMDAC_GENERAL_CONTROL, regp->general);
 
 	if (pNv->twoHeads) {
+		if (pNv->NVArch >= 0x17)
+			NVCrtcWriteRAMDAC(crtc, NV_RAMDAC_630, regp->unk_630);
 		NVCrtcWriteRAMDAC(crtc, NV_RAMDAC_FP_CONTROL, regp->fp_control);
 		NVCrtcWriteRAMDAC(crtc, NV_RAMDAC_FP_DEBUG_0, regp->debug_0);
 		NVCrtcWriteRAMDAC(crtc, NV_RAMDAC_FP_DEBUG_1, regp->debug_1);
@@ -1663,7 +1669,7 @@ void NVCrtcSetBase(xf86CrtcPtr crtc, int x, int y)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	NVPtr pNv = NVPTR(pScrn);    
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	uint32_t start = (y * pScrn->displayWidth + x) * pScrn->bitsPerPixel / 8;
 
 	if (crtc->rotatedData != NULL) /* we do not exist on the real framebuffer */
@@ -1680,7 +1686,7 @@ void NVCrtcSetBase(xf86CrtcPtr crtc, int x, int y)
 
 static void nv_crtc_save_state_palette(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(crtc->scrn);
 	uint32_t mmiobase = nv_crtc->head ? NV_PDIO1_OFFSET : NV_PDIO0_OFFSET;
 	int i;
@@ -1697,7 +1703,7 @@ static void nv_crtc_save_state_palette(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 }
 static void nv_crtc_load_state_palette(xf86CrtcPtr crtc, RIVA_HW_STATE *state)
 {
-	NVCrtcPrivatePtr nv_crtc = crtc->driver_private;
+	struct nouveau_crtc *nv_crtc = to_nouveau_crtc(crtc);
 	NVPtr pNv = NVPTR(crtc->scrn);
 	uint32_t mmiobase = nv_crtc->head ? NV_PDIO1_OFFSET : NV_PDIO0_OFFSET;
 	int i;

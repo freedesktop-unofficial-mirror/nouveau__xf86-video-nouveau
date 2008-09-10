@@ -318,7 +318,7 @@ NVAccelDownloadM2MF(PixmapPtr pspix, int x, int y, int w, int h,
 			BEGIN_RING(chan, m2mf, 0x0200, 6);
 			OUT_RING  (chan, 0);
 			OUT_RING  (chan, 0);
-			OUT_RING  (chan, exaGetPixmapPitch(pspix));
+			OUT_RING  (chan, pspix->drawable.width * cpp);
 			OUT_RING  (chan, pspix->drawable.height);
 			OUT_RING  (chan, 1);
 			OUT_RING  (chan, 0);
@@ -570,7 +570,7 @@ NVAccelUploadM2MF(PixmapPtr pdpix, int x, int y, int w, int h,
 			BEGIN_RING(chan, m2mf, 0x021c, 6);
 			OUT_RING  (chan, 0);
 			OUT_RING  (chan, 0);
-			OUT_RING  (chan, exaGetPixmapPitch(pdpix));
+			OUT_RING  (chan, pdpix->drawable.width * cpp);
 			OUT_RING  (chan, pdpix->drawable.height);
 			OUT_RING  (chan, 1);
 			OUT_RING  (chan, 0);
@@ -843,20 +843,17 @@ NVExaInit(ScreenPtr pScreen)
 
 	pNv->EXADriverPtr->exa_major = EXA_VERSION_MAJOR;
 	pNv->EXADriverPtr->exa_minor = EXA_VERSION_MINOR;
-
 	pNv->EXADriverPtr->flags = EXA_OFFSCREEN_PIXMAPS | EXA_HANDLES_PIXMAPS;
+
+	pNv->EXADriverPtr->pixmapOffsetAlign = 256; 
+	pNv->EXADriverPtr->pixmapPitchAlign = 64;
+
 	pNv->EXADriverPtr->PrepareAccess = NVExaPrepareAccess;
 	pNv->EXADriverPtr->FinishAccess = NVExaFinishAccess;
 	pNv->EXADriverPtr->PixmapIsOffscreen = NVExaPixmapIsOffscreen;
 	pNv->EXADriverPtr->CreatePixmap = NVExaCreatePixmap;
 	pNv->EXADriverPtr->DestroyPixmap = NVExaDestroyPixmap;
 	pNv->EXADriverPtr->ModifyPixmapHeader = NVExaModifyPixmapHeader;
-
-	if (pNv->Architecture < NV_ARCH_50)
-		pNv->EXADriverPtr->pixmapOffsetAlign = 256; 
-	else
-		pNv->EXADriverPtr->pixmapOffsetAlign = 65536; /* fuck me! */
-	pNv->EXADriverPtr->pixmapPitchAlign = 64; 
 
 	if (pNv->Architecture >= NV_ARCH_50) {
 		pNv->EXADriverPtr->maxX = 8192;
