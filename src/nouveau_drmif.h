@@ -206,8 +206,6 @@ struct nouveau_bo_priv {
 	/* Tracking */
 	struct drm_nouveau_gem_pushbuf_bo *pending;
 	struct nouveau_channel *pending_channel;
-	struct nouveau_fence *fence;
-	struct nouveau_fence *wr_fence;
 
 	/* Userspace object */
 	void *sysmem;

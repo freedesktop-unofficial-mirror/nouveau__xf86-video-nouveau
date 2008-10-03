@@ -291,7 +291,6 @@ nouveau_bo_del(struct nouveau_bo **bo)
 	if (nvbo->pending)
 		nouveau_pushbuf_flush(nvbo->pending_channel, 0);
 
-	nouveau_fence_ref(NULL, &nvbo->fence);
 	nouveau_bo_ufree(nvbo);
 	nouveau_bo_kfree(nvbo);
 	free(nvbo);
