@@ -141,8 +141,6 @@ struct nouveau_channel_priv {
 	struct nouveau_notifier *fence_ntfy;
 
 	struct nouveau_pushbuf_priv pb;
-
-	unsigned user_charge;
 };
 #define nouveau_channel(n) ((struct nouveau_channel_priv *)(n))
 
