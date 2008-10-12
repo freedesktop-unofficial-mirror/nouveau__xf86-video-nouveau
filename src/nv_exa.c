@@ -804,7 +804,8 @@ NVExaInit(ScreenPtr pScreen)
 	ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
 	NVPtr pNv = NVPTR(pScrn);
 
-	if(!(pNv->EXADriverPtr = (ExaDriverPtr) xnfcalloc(sizeof(ExaDriverRec), 1))) {
+	pNv->EXADriverPtr = exaDriverAlloc();
+	if (!pNv->EXADriverPtr) {
 		pNv->NoAccel = TRUE;
 		return FALSE;
 	}
@@ -892,12 +893,6 @@ NVExaInit(ScreenPtr pScreen)
 
 	if (!exaDriverInit(pScreen, pNv->EXADriverPtr))
 		return FALSE;
-	else
-		/* EXA init catches this, but only for xserver >= 1.4 */
-		if (pNv->VRAMPhysicalSize / 2 < NOUVEAU_ALIGN(pScrn->virtualX, 64) * NOUVEAU_ALIGN(pScrn->virtualY, 64) * (pScrn->bitsPerPixel >> 3)) {
-			xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "The virtual screen size's resolution is too big for the video RAM framebuffer at this colour depth.\n");
-			return FALSE;
-		}
 
 	return TRUE;
 }
