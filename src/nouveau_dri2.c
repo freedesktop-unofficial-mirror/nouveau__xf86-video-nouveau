@@ -1,3 +1,5 @@
+#include "xorg-server.h"
+#ifdef DRI2
 #include "nv_include.h"
 #include "dri2.h"
 
@@ -126,4 +128,4 @@ nouveau_dri2_takedown(ScreenPtr pScreen)
 {
 	DRI2CloseScreen(pScreen);
 }
-
+#endif

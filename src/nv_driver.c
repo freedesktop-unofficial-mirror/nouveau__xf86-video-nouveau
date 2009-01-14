@@ -27,6 +27,7 @@
 #include "xf86int10.h"
 
 #include "xf86drm.h"
+#include "xorg-server.h"
 
 /*
  * Forward definitions for the functions that make up the driver.
@@ -1951,7 +1952,9 @@ NVScreenInit(int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	/* First init DRI/DRM */
 	if (!NVDRIScreenInit(pScrn))
 		return FALSE;
+#ifdef DRI2
 	nouveau_dri2_init(pScreen);
+#endif
 
 	/* Allocate and map memory areas we need */
 	if (!NVMapMem(pScrn))
