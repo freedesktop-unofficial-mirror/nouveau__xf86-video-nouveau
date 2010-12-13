@@ -186,6 +186,15 @@ int nv50_xv_port_attribute_get(ScrnInfoPtr, Atom, INT32 *, pointer);
 void nv50_xv_set_port_defaults(ScrnInfoPtr, NVPortPrivPtr);
 void nv50_xv_csc_update(ScrnInfoPtr, NVPortPrivPtr);
 
+/* nvc0_xv.c */
+int nvc0_xv_image_put(ScrnInfoPtr, struct nouveau_bo *, int, int, int, int,
+		      BoxPtr, int, int, int, int, uint16_t, uint16_t,
+		      uint16_t, uint16_t, uint16_t, uint16_t,
+		      RegionPtr, PixmapPtr, NVPortPrivPtr);
+void nvc0_xv_m2mf(struct nouveau_channel *, struct nouveau_bo *, int, int, int,
+		  struct nouveau_bo *, int);
+void nvc0_xv_csc_update(NVPtr, float, float *, float *, float *);
+
 /* To support EXA 2.0, 2.1 has this in the header */
 #ifndef exaMoveInPixmap
 extern void exaMoveInPixmap(PixmapPtr pPixmap);
