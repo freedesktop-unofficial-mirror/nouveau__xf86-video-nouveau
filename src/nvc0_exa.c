@@ -95,6 +95,7 @@ NVC0AccelDownloadM2MF(PixmapPtr pspix, int x, int y, int w, int h,
 
 		if (dst_pitch == line_len) {
 			memcpy(dst, src, dst_pitch * line_count);
+			dst += dst_pitch * line_count;
 		} else {
 			for (i = 0; i < line_count; ++i) {
 				memcpy(dst, src, line_len);
