@@ -61,6 +61,7 @@
 #include <X11/extensions/dpms.h>
 #endif
 
+#include "compat-api.h"
 #define NV_DMA_DEBUG 0
 
 #include "nouveau_local.h"
